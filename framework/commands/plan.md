@@ -32,8 +32,10 @@ Ask the user in short, focused prompts. One field at a time — do not dump the 
 5. **Scope (out)** — bullets. Prompt: "What might a reader assume is in scope but isn't?"
 6. **Acceptance criteria** — bullets, "given X when Y then Z" shape. Observable + testable.
 7. **Design sketch** — short narrative. Primitives reused, primitives added, shape of the change. Grep ledger, archive, wiki before asking — surface prior art to the user.
-8. **Risks** — concrete, not "might be slow".
-9. **Open questions** — anything that must be decided before locking.
+8. **Assumptions** — bullets. Prompt: "What are you taking as true but haven't confirmed?" Push hard here — implicit assumptions are where most plans go wrong. If the user says "none", propose 2–3 likely candidates yourself based on the design sketch and ask them to confirm or correct.
+9. **Verification map** — for each implementation step the design sketch implies, name a concrete verify check (failing test, command output, screenshot diff, assertion, migration dry-run). Prompt: "How will you know each step landed?" Fill the table in `spec.md`. If a step has no clear verify, that's a signal to split or rethink the step.
+10. **Risks** — concrete, not "might be slow".
+11. **Open questions** — anything that must be decided before locking.
 
 For each field, if the user's answer is thin (< 1 sentence for narrative fields, 0 bullets for list fields), push back once with a specific prompt before accepting.
 

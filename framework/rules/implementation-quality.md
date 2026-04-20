@@ -7,6 +7,11 @@
 - **Build green.** No PR merges red. If CI is broken, fix CI first.
 - **Reuse before invention.** Grep existing primitives + ledger + archive + wiki before writing a new helper.
 - **Small changes.** Prefer 5 small PRs to 1 large one. Large PRs hide regressions and slow review.
+- **Surgical scope.** Every changed line traces directly to the user's request, the locked spec, or cleanup made necessary by this change. No drive-by refactors, reformats, renames, or "improvements" to adjacent code. If you find a bug outside scope, log it as a TODO instead of fixing it in this diff.
+- **Clean only your own mess.** Remove imports, variables, files, docs, and tests made stale by your change. Don't delete pre-existing dead code unless asked — mention it so the user can decide.
+- **Simple until forced.** No abstractions for single-use code. No knobs or configuration that weren't asked for. No speculative extension points. No handling for states that can't happen per the contract. If a 200-line solution could be 50 lines with the same behavior, rewrite before review.
+- **Verifiable success criteria.** Before non-trivial work, state how you'll know it's done — a failing test that'll pass, a command whose output you'll check, a screenshot diff, a concrete assertion. For bug fixes, reproduce with a failing test (or smallest available verification artifact) before writing the fix. For multi-step work, name a verify check per step, not just at the end.
+- **Surface assumptions.** If a request has multiple plausible meanings, list the interpretations and ask one focused question. Don't silently pick the version that's easiest to implement.
 - **Docs honest.** Don't describe code that doesn't exist. Don't leave stale claims in the wiki. If you rip out a feature, rip its wiki page with it.
 - **Plan before code.** For non-trivial work, spec exists and is signed off (see `feature-spec-required.md`).
 - **No silent failures.** Errors propagate or log with context. No bare `catch {}`.

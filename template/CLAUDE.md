@@ -75,6 +75,8 @@ Rule of thumb: auto-loaded set is small and current. Query-only set grows unboun
 
 Pipeline for every non-trivial task. Each step has a skill or command — use them, don't freelance.
 
+> **Trivial fast-path.** Typo-only, doc-only, or obvious one-file fixes skip `/plan`. Still: state the intended change, make the surgical edit, run the smallest relevant verification. When in doubt, `/plan`.
+
 1. **Orient.** Read `docs/wiki/current-status.md` and `docs/todos/overview.md`. Check if there's an active plan folder in `docs/plans/active/` already covering this task.
 2. **Plan the work — pick one entry point:**
    - **New feature:** run `/plan` (`.claude/commands/plan.md`). It asks for problem/goal/scope/acceptance interactively, sweeps ledger + archive for prior art, scaffolds `docs/plans/active/YYYY-MM-DD_<slug>/` from `.claude/templates/`, and wires the entry into `docs/todos/overview.md` (and a per-TODO detail file at `docs/todos/<slug>.md` from `.claude/templates/todo.md`).
@@ -99,6 +101,10 @@ Every rule in `.claude/rules/` is **binding**. Load on demand when the rule's do
 
 ## Working style
 
+- **Ambiguity before action.** If a request has multiple plausible meanings, list the interpretations and ask one focused question. Don't silently pick the easiest to implement.
+- **Surgical diffs.** Every changed line traces to the request, the spec, or cleanup made necessary by this change. No drive-by refactors, reformats, or adjacent "improvements."
+- **State the plan, then verify each step.** For multi-step work, list the steps with a verify check per step *before* starting. "Done" means the verify check passed, not "I wrote the code."
+- **Push back on scope.** If a simpler path meets the goal, say so before creating a plan or writing code. Bias toward caution over speed.
 - **Plan before code.** Spec → sign-off → code. Non-trivial work gets a plan folder.
 - **Reuse before invention.** Grep ledger + archive + wiki before writing a new primitive.
 - **Small changes.** Prefer 5 small PRs to 1 big one. Big PRs hide regressions.
