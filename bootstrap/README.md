@@ -13,7 +13,7 @@ target-repo/
   CLAUDE.md                                      (from alice/template/CLAUDE.md, only if missing)
   .gitignore                                     (.tmp/ appended if missing)
   .alice/                                        framework payload — vendored copy of alice/framework/
-    rules/  templates/  commands/  skills/  bin/
+    rules/  templates/  commands/  skills/  agents/  bin/
   .claude/                                       Claude Code config — relative symlinks into .alice/
     _alice    -> ../.alice                       (legacy/convenience path)
     rules     -> ../.alice/rules
@@ -24,9 +24,16 @@ target-repo/
       investigate           -> ../../.alice/skills/investigate
       plan-eng-review       -> ../../.alice/skills/plan-eng-review
       qa                    -> ../../.alice/skills/qa
+      research              -> ../../.alice/skills/research
       review                -> ../../.alice/skills/review
       security-audit        -> ../../.alice/skills/security-audit
       setup-browser-cookies -> ../../.alice/skills/setup-browser-cookies
+    agents/
+      code-reviewer.md          -> ../../.alice/agents/code-reviewer.md
+      refactor-cleaner.md       -> ../../.alice/agents/refactor-cleaner.md
+      security-reviewer.md      -> ../../.alice/agents/security-reviewer.md
+      seo-specialist.md         -> ../../.alice/agents/seo-specialist.md
+      silent-failure-hunter.md  -> ../../.alice/agents/silent-failure-hunter.md
   docs/
     README.md
     todos/overview.md                            (per-TODO detail files added later as work appears)
@@ -53,7 +60,7 @@ Otherwise: copy `<alice>/framework/` → `<target>/.alice/`. This must be a real
 
 ### 2. Wire `.claude/` shims into `.alice/`
 
-Create `<target>/.claude/skills/` if missing.
+Create `<target>/.claude/skills/` and `<target>/.claude/agents/` if missing.
 
 Then create these **relative** symlinks (skip any that already exist — surface them):
 
@@ -64,6 +71,7 @@ Then create these **relative** symlinks (skip any that already exist — surface
 | `.claude/templates` | `../.alice/templates` |
 | `.claude/commands` | `../.alice/commands` |
 | `.claude/skills/<name>` for each dir under `.alice/skills/` | `../../.alice/skills/<name>` |
+| `.claude/agents/<name>.md` for each file under `.alice/agents/` | `../../.alice/agents/<name>.md` |
 
 Relative paths matter: it keeps the target portable. Absolute paths would break if the repo moves.
 
@@ -133,7 +141,8 @@ Re-run the agent quickstart prompt: it'll clone alice into temp, see that `.alic
 
 ```bash
 rm -rf .alice .claude/_alice .claude/{rules,templates,commands} \
-       .claude/skills/{browse,investigate,plan-eng-review,qa,review,security-audit,setup-browser-cookies}
+       .claude/skills/{browse,investigate,plan-eng-review,qa,research,review,security-audit,setup-browser-cookies} \
+       .claude/agents
 ```
 
 `docs/` and `CLAUDE.md` stay — they're project content, not framework.

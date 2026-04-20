@@ -20,6 +20,7 @@ alice/
     templates/             overview / spec / decision / implementation / todo
     commands/plan.md       /plan interactive spec builder
     skills/<name>/         skill sources — ship to adopter at .alice/skills/<name>/
+    agents/<name>.md       sub-agent sources — ship to adopter at .alice/agents/<name>.md
     bin/                   alice-slug / alice-diff-scope / alice-review-{log,read} / chrome-cdp
   template/                ships to adopter's repo root
     CLAUDE.md              template that becomes the adopter's CLAUDE.md
@@ -40,7 +41,7 @@ Almost every file here ships **verbatim** into adopting repos via the bootstrap 
 1. **Stay generic.** If a rule, template, or skill starts naming a framework (Next.js, Rails, Fastify), a stack (Cloudflare, AWS), or a domain (blockchain, payments, auth-provider), push it back into the adopter's `CLAUDE.md` or `docs/wiki/`. Alice is the universal floor.
 2. **No brand coupling.** No gstack, no cmux-as-requirement, no ns-mm, no tool-chain lock-in beyond what's intrinsic to the skill (e.g. browse uses bun because `bun build --compile` is load-bearing — that's intrinsic, not brand coupling).
 3. **Template changes cascade.** Edits to `template/**`, `framework/rules/**`, `framework/templates/**`, or `framework/commands/plan.md` affect every future adopter. Treat them like public API.
-4. **Skills are Claude-Code-shaped.** Skill frontmatter (`allowed-tools`, `description`, hook semantics) assumes Claude Code as the runtime. Rules, templates, commands, and docs are agent-agnostic — any agent that can read markdown can use them via `.alice/rules/`, `.alice/templates/`, etc. This is why the bootstrap produces `.alice/` at the repo root (shared) plus a `.claude/` shim (Claude-specific). Preserve the split.
+4. **Skills and agents are Claude-Code-shaped.** Skill frontmatter (`allowed-tools`, `description`, hook semantics) and agent frontmatter (`tools`, `description`) assume Claude Code as the runtime. Rules, templates, commands, and docs are agent-agnostic — any agent that can read markdown can use them via `.alice/rules/`, `.alice/templates/`, etc. This is why the bootstrap produces `.alice/` at the repo root (shared) plus a `.claude/` shim (Claude-specific). Preserve the split.
 5. **Lazy install over eager install.** The `browse` binary builds on first `/browse` invocation via `framework/skills/browse/setup`. Don't add mandatory pre-build steps to the bootstrap recipe — the skills already self-heal.
 6. **Non-destructive bootstrap.** `bootstrap/README.md` tells the driving agent to never overwrite existing `CLAUDE.md`, `docs/`, or `.alice/` in the target repo — surface conflicts and propose migrations instead. If you add new bootstrap steps, preserve that invariant.
 
@@ -59,6 +60,8 @@ If a new proposal smells like one of these, push back. If it's genuinely a unive
 ## Provenance
 
 Distilled from an internal project's agent operating manual on 2026-04-20. The five binding rules, templates, `/plan` command, and skill suite were ported with all project-specific content stripped out. State paths and bin scripts were rebranded to `.alice/` / `alice-*`. If you see ghosts of the original project in commit history (chain-specific rules, stack profiles, gstack wording, root-level `TODOS.md`), re-read why they were removed before bringing anything back.
+
+The `/research` skill and the sub-agents under `framework/agents/` were ported in from external sources (see `README.md` "References" for credits). Stack-specific content (named frameworks, hard tool pins, cost-tier advice, versioned addenda) was stripped so they match alice's generic floor. Per-skill `ACKNOWLEDGEMENTS.md` files are not used — credits live in `README.md` "References" only. Do not reintroduce either stack specifics or per-skill acknowledgement files.
 
 ## When to update this file
 

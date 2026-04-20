@@ -23,7 +23,8 @@ docs/                 project operating manual (wiki + plans + ledger)
   rules/                binding rules
   templates/            spec / decision / implementation / overview starters
   commands/             slash commands (e.g. /plan)
-  skills/               skill source (qa, browse, review, plan-eng-review, investigate, ...)
+  skills/               skill source (qa, browse, review, plan-eng-review, investigate, research, ...)
+  agents/               sub-agent source (code-reviewer, security-reviewer, silent-failure-hunter, refactor-cleaner, seo-specialist)
   bin/                  alice-* helper scripts
 .claude/                Claude Code config — thin shim of symlinks into .alice/
   _alice    -> ../.alice
@@ -31,6 +32,7 @@ docs/                 project operating manual (wiki + plans + ledger)
   templates -> ../.alice/templates
   commands  -> ../.alice/commands
   skills/<name> -> ../../.alice/skills/<name>
+  agents/<name> -> ../../.alice/agents/<name>
 ```
 
 ## Stack
@@ -68,6 +70,7 @@ Deep architecture: `docs/wiki/architecture.md`. Domain model: `docs/wiki/domain-
 | `docs/ledger/experiences.md` | query-only | before repeating a pattern that previously burned |
 | `.claude/rules/**` | load on demand | when about to do the thing the rule governs |
 | `.claude/templates/**` | load on demand | when creating a plan folder or ledger entry |
+| `.claude/agents/**` | load on demand | when a sub-agent is invoked (see Agent routing) |
 
 Rule of thumb: auto-loaded set is small and current. Query-only set grows unbounded — pull in only when the question needs the history.
 
@@ -136,8 +139,26 @@ The project ships a small, project-local set of skills under `.alice/skills/` (s
 | Pre-landing PR / diff review | `review` |
 | Pre-implementation architecture review | `plan-eng-review` |
 | Security audit — secrets, dependencies, CI/CD, OWASP, LLM trust | `security-audit` |
+| Multi-source research with citations — web synthesis, competitive / market / tech scan | `research` |
 
 **Project-local state.** Any skill that needs scratch space writes to `<project-root>/.tmp/` (gitignored, per-checkout). Never `~/.claude/`, never user-home.
+
+## Agent routing
+
+The framework also ships sub-agents under `.alice/agents/` (symlinked into `.claude/agents/`). Two invocation modes:
+
+1. **Auto-invoke during work.** The main agent calls a sub-agent when its trigger condition appears — no explicit command needed.
+2. **Delegated from inside a skill.** When a skill's job overlaps with a sub-agent, the skill must invoke the sub-agent via the `Agent` tool — don't inline the work. This protects the skill's context and lets passes run in parallel.
+
+| Sub-agent | Auto-invoke trigger | Skill that delegates to it |
+|-----------|--------------------|-----------------------------|
+| `code-reviewer` | after any non-trivial code edit — quick QA pass before the user sees the diff | `/review` (fans out for lang/domain passes) |
+| `security-reviewer` | code touching auth, user input, secrets, API endpoints, sensitive data | `/security-audit` |
+| `silent-failure-hunter` | suspicion of swallowed errors, bad fallbacks, or missing error propagation | on-demand only |
+| `refactor-cleaner` | suspected dead code, unused deps, duplication — not during active feature work | on-demand only |
+| `seo-specialist` | web-facing pages / marketing sites — meta tags, structured data, Core Web Vitals, sitemap / robots, content mapping | on-demand only |
+
+**Skill-delegates-to-agent rule.** If a skill has a matching sub-agent, the skill must run the agent as a fresh sub-agent via the `Agent` tool. Inlining the work in the main skill loop pollutes context and blocks parallelism — use the sub-agent.
 
 ## Definition of done
 
