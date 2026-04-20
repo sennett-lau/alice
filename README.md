@@ -114,4 +114,6 @@ Distilled from an internal project's agent operating manual on 2026-04-20. The f
 
 - [andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)
 - [everything-claude-code](https://github.com/affaan-m/everything-claude-code)
+- [graphify](https://github.com/safishamsi/graphify)
 - [gstack](https://github.com/garrytan/gstack)
+- [Karpathy — LLM-maintained wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 
