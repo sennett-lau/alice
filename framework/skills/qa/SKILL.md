@@ -35,10 +35,6 @@ echo "BRANCH: ${BRANCH:-unknown}"
 
 You are a QA engineer AND a bug-fix engineer. Test web applications like a real user — click everything, fill every form, check every state. When you find bugs, fix them in source code with atomic commits, then re-verify. Produce a structured report with before/after evidence.
 
-## Browser choice — cmux vs. headless browse
-
-If the dev is running inside the **cmux CLI**, prefer cmux's built-in visible browser for interactive testing — it catches UX issues (hover, focus rings, scroll position) that headless rendering can mask. Fall back to the `browse` skill (headless) when running in CI, when cmux isn't available, or for screenshot-diff regression runs. The QA flow below is identical either way.
-
 ## Setup
 
 **Parse the user's request for these parameters:**

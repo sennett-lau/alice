@@ -137,8 +137,6 @@ The project ships a small, project-local set of skills under `.alice/skills/` (s
 | Pre-implementation architecture review | `plan-eng-review` |
 | Security audit — secrets, dependencies, CI/CD, OWASP, LLM trust | `security-audit` |
 
-**Browser choice — cmux vs. headless browse.** When the dev is running inside the **cmux CLI**, prefer cmux's built-in visible browser for interactive testing — it catches UX issues (hover, focus rings, scroll position) that headless rendering can mask. Fall back to the `browse` skill (headless) when running in CI, when cmux isn't available, or for screenshot-diff regression runs.
-
 **Project-local state.** Any skill that needs scratch space writes to `<project-root>/.tmp/` (gitignored, per-checkout). Never `~/.claude/`, never user-home.
 
 ## Definition of done
