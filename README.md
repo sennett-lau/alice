@@ -103,3 +103,8 @@ Alice is a framework, not an app. Updates are rare and surgical. The rules:
 ## Provenance
 
 Distilled from an internal project's agent operating manual on 2026-04-20. The five binding rules, templates, `/plan` command, and skill suite were ported with all project-specific content stripped out — what's left is meant to be the universal floor that every adopting repo builds on top of. State paths and bin scripts were rebranded to `.alice/` / `alice-*`.
+
+## References
+
+- [andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)
+- [gstack](https://github.com/garrytan/gstack)
