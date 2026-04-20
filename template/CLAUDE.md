@@ -24,7 +24,7 @@ docs/                 project operating manual (wiki + plans + ledger)
   templates/            spec / decision / implementation / overview starters
   commands/             slash commands (e.g. /plan)
   skills/               skill source (qa, browse, review, plan-eng-review, investigate, research, ...)
-  agents/               sub-agent source (code-reviewer, security-reviewer, silent-failure-hunter, refactor-cleaner, seo-specialist)
+  agents/               sub-agent source (code-reviewer, security-reviewer, silent-failure-hunter, refactor-cleaner, seo-specialist, wiki-maintainer)
   bin/                  alice-* helper scripts
 .claude/                Claude Code config — thin shim of symlinks into .alice/
   _alice    -> ../.alice
@@ -157,6 +157,7 @@ The framework also ships sub-agents under `.alice/agents/` (symlinked into `.cla
 | `silent-failure-hunter` | suspicion of swallowed errors, bad fallbacks, or missing error propagation | on-demand only |
 | `refactor-cleaner` | suspected dead code, unused deps, duplication — not during active feature work | on-demand only |
 | `seo-specialist` | web-facing pages / marketing sites — meta tags, structured data, Core Web Vitals, sitemap / robots, content mapping | on-demand only |
+| `wiki-maintainer` | post-feature retro (wiki update step), initial wiki seed during alice bootstrap, on-demand drift lint | `post-feature-retro` rule (retro mode); bootstrap step 6 (seed mode) |
 
 **Skill-delegates-to-agent rule.** If a skill has a matching sub-agent, the skill must run the agent as a fresh sub-agent via the `Agent` tool. Inlining the work in the main skill loop pollutes context and blocks parallelism — use the sub-agent.
 

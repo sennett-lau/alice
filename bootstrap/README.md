@@ -34,6 +34,7 @@ target-repo/
       security-reviewer.md      -> ../../.alice/agents/security-reviewer.md
       seo-specialist.md         -> ../../.alice/agents/seo-specialist.md
       silent-failure-hunter.md  -> ../../.alice/agents/silent-failure-hunter.md
+      wiki-maintainer.md        -> ../../.alice/agents/wiki-maintainer.md
   docs/
     README.md
     todos/overview.md                            (per-TODO detail files added later as work appears)
@@ -103,7 +104,7 @@ Ensure `.tmp/` is ignored. If `<target>/.gitignore` exists and already contains 
 This is where the agent earns its keep — the script-shaped steps above only set up the skeleton.
 
 - **CLAUDE.md placeholders.** Replace every `{{PLACEHOLDER}}` (project name, alice remote/path, stack bullets, command examples, repo layout). Read `package.json` / `pyproject.toml` / `wrangler.toml` / `next.config.*` / `Gemfile` / etc. and write what's actually in the repo. Drop sections that don't apply (e.g. websocket section for a CLI tool). Add the non-obvious gotchas you can infer from the code into the **Critical gotchas** section.
-- **Wiki seeds.** `docs/wiki/current-status.md` should say what already ships today (read README, CHANGELOG, recent commits). `docs/wiki/architecture.md` and `docs/wiki/domain-model.md` need a real first pass — even thin ones — based on the repo's actual structure, services, and schema.
+- **Wiki seeds — delegate to `wiki-maintainer` in seed mode.** Invoke the sub-agent via the `Agent` tool with `subagent_type: wiki-maintainer` (or the general-purpose agent pointed at `.alice/agents/wiki-maintainer.md`) and tell it to seed the wiki from the repo. It will populate `docs/wiki/current-status.md` / `architecture.md` / `domain-model.md` from the actual manifests, schema files, README, CHANGELOG, and recent commits, and return a seed report listing what was populated, what it left as placeholders for you to fill, and any contradictions it surfaced between README claims and code reality. Don't inline this in the main bootstrap loop — a fresh sub-agent keeps the seed focused and the driving-agent context clean.
 - **First plan.** Run `/plan <slug>` in Claude Code to dogfood the flow on a tiny feature. If anything feels missing, add to the project's CLAUDE.md, not alice (alice stays generic).
 
 ### 7. (Optional) Browser binary — lazy build at first use

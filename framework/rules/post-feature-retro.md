@@ -9,11 +9,14 @@
    The folder is frozen from this point. Do not edit after move.
 
 2. **Wiki update.**
+   Delegate to the `wiki-maintainer` sub-agent in **retro mode** via the `Agent` tool — pass it the archived plan folder path and the shipped diff range. It owns `docs/wiki/**` and returns a summary of files written/removed plus any contradictions flagged for human call. The pass covers, at minimum:
    - `current-status.md` → move the item from "In flight" to "Shipped".
    - If architecture changed → update `architecture.md`.
    - If schema or core types changed → update `domain-model.md`.
    - If the feature is its own domain area → add `wiki/features/<name>.md`.
    - If a feature was ripped out → remove its wiki page.
+
+   Inlining the edits in the main agent loop pollutes context — run the sub-agent fresh.
 
 3. **Experiences append.**
    Append a feature-retro entry to `docs/ledger/experiences.md`:
