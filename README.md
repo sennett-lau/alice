@@ -9,16 +9,14 @@ Open Claude Code (or any capable coding agent) inside the repo you want to wire 
 ```
 Adopt the alice agentic framework into THIS repo.
 
-Clone https://github.com/<OWNER>/alice into a throwaway temp directory, read
-its README and bootstrap guide end to end, then follow the adoption flow they
-describe — vendor alice into this repo (do not leave a dependency on the temp
-clone), fill the scaffolded CLAUDE.md, and seed docs/wiki/* from what's
+Clone https://github.com/sennett-lau/alice into a throwaway temp directory,
+read its README and bootstrap guide end to end, then follow the adoption flow
+they describe — vendor alice into this repo (do not leave a dependency on the
+temp clone), fill the scaffolded CLAUDE.md, and seed docs/wiki/* from what's
 actually in the repo. Never overwrite an existing CLAUDE.md or docs/ — surface
 a migration plan instead. Delete the temp clone when done and report back what
 you did.
 ```
-
-> Replace `<OWNER>` with the actual GitHub owner once alice is published.
 
 ## What alice gives you
 
