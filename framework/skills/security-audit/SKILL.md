@@ -285,28 +285,23 @@ Use Grep to search for these patterns:
 
 ### Phase 8: Skill Supply Chain
 
-Scan installed Claude Code skills for malicious patterns. 36% of published skills have security flaws, 13.4% are outright malicious (Snyk ToxicSkills research).
+Scan project-local AI skills for malicious patterns. 36% of published skills have security flaws, 13.4% are outright malicious (Snyk ToxicSkills research).
 
-**Tier 1 — repo-local (automatic):** Scan the repo's local skills directory for suspicious patterns:
+**Scope: repo-local only.** alice is project-scoped and must not reach into user-home state. Do NOT scan `~/.claude/`, `~/.codex/`, `~/.gstack/`, or any global skill install. If the user wants their globally installed skills audited, that's a separate workflow outside alice. Hard-stop this phase at the repo boundary.
 
 ```bash
-ls -la .claude/skills/ 2>/dev/null
+ls -la .claude/skills/ .alice/skills/ 2>/dev/null
 ```
 
-Use Grep to search all local skill SKILL.md files for suspicious patterns:
+Use Grep to search all SKILL.md files inside the repo (`.claude/skills/**`, `.alice/skills/**`, and any project-local skill dirs) for suspicious patterns:
 - `curl`, `wget`, `fetch`, `http`, `exfiltrat` (network exfiltration)
 - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `env.`, `process.env` (credential access)
 - `IGNORE PREVIOUS`, `system override`, `disregard`, `forget your instructions` (prompt injection)
+- `~/.`, `$HOME/`, absolute paths outside the repo root (user-home reach-in — itself a smell for a project-local skill)
 
-**Tier 2 — global skills (requires permission):** Before scanning globally installed skills or user settings, use AskUserQuestion:
-"Phase 8 can scan your globally installed AI coding agent skills and hooks for malicious patterns. This reads files outside the repo. Want to include this?"
-Options: A) Yes — scan global skills too  B) No — repo-local only
+**Severity:** CRITICAL for credential exfiltration attempts / prompt injection in skill files. HIGH for suspicious network calls / overly broad tool permissions / user-home reach-in. MEDIUM for skills from unverified sources without review.
 
-If approved, run the same Grep patterns on globally installed skill files and check hooks in user settings.
-
-**Severity:** CRITICAL for credential exfiltration attempts / prompt injection in skill files. HIGH for suspicious network calls / overly broad tool permissions. MEDIUM for skills from unverified sources without review.
-
-**FP rules:** alice's own skills are trusted (check if skill path resolves to a known repo). Skills that use `curl` for legitimate purposes (downloading tools, health checks) need context — only flag when the target URL is suspicious or when the command includes credential variables.
+**FP rules:** alice's own skills (under `.alice/skills/**`) are trusted; the `curl https://bun.sh/install` in `.alice/skills/browse/setup` is legitimate (SHA-verified one-time build). Skills that use `curl` for legitimate purposes (downloading pinned tools, health checks) need context — only flag when the target URL is suspicious, the fetch is unauthenticated against a mutable source, or the command includes credential variables.
 
 ### Phase 9: OWASP Top 10 Assessment
 
