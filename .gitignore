@@ -1,0 +1,14 @@
+# Platform-specific compiled binaries — adopters build on first use via skills/browse/setup
+framework/skills/browse/dist/
+framework/skills/browse/node_modules/
+framework/skills/browse/bun.lock
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editor cruft
+.idea/
+.vscode/
+*.swp
+*.swo

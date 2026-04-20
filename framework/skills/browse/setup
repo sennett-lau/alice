@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# alice browse — one-time build of the headless browser binary.
+#
+# Invoked lazily by the browse / qa / setup-browser-cookies skills when the
+# compiled binary is missing. Idempotent: re-running when the binary already
+# exists is a fast no-op.
+#
+# Installs bun if missing (with SHA-checked installer), then runs the bun
+# compile + build-node-server steps that produce dist/browse and dist/find-browse.
+
+set -euo pipefail
+umask 077
+
+SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# ─── Ensure bun is available ───────────────────────────────────
+if ! command -v bun >/dev/null 2>&1; then
+  echo "alice browse setup: bun is required but not installed."
+  echo "Installing bun 1.3.10 (with SHA-256 checksum verification)..."
+  BUN_VERSION="1.3.10"
+  BUN_INSTALL_SHA="bab8acfb046aac8c72407bdcce903957665d655d7acaa3e11c7c4616beae68dd"
+  tmpfile="$(mktemp)"
+  trap 'rm -f "$tmpfile"' EXIT
+  curl -fsSL "https://bun.sh/install" -o "$tmpfile"
+  actual_sha="$(shasum -a 256 "$tmpfile" | awk '{print $1}')"
+  if [ "$actual_sha" != "$BUN_INSTALL_SHA" ]; then
+    echo "ERROR: bun install script checksum mismatch" >&2
+    echo "  expected: $BUN_INSTALL_SHA" >&2
+    echo "  got:      $actual_sha" >&2
+    exit 1
+  fi
+  BUN_VERSION="$BUN_VERSION" bash "$tmpfile"
+  trap - EXIT
+  rm -f "$tmpfile"
+  # Make the freshly-installed bun discoverable in this process.
+  export PATH="$HOME/.bun/bin:$PATH"
+  command -v bun >/dev/null 2>&1 || {
+    echo "ERROR: bun installed but not found on PATH. Open a new shell and re-run." >&2
+    exit 1
+  }
+fi
+
+# ─── Build ──────────────────────────────────────────────────────
+cd "$SKILL_DIR"
+echo "alice browse setup: installing deps with bun..."
+bun install --silent
+
+echo "alice browse setup: building headless binary..."
+bun run build
+
+if [ -x "$SKILL_DIR/dist/browse" ]; then
+  echo "alice browse setup: OK — binary at $SKILL_DIR/dist/browse"
+else
+  echo "ERROR: build completed but $SKILL_DIR/dist/browse is not executable." >&2
+  exit 1
+fi

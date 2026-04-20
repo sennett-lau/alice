@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# alice-review-read — read project-local review log + HEAD for dashboard.
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+eval "$("$SCRIPT_DIR/alice-slug" 2>/dev/null)"
+cat "$ROOT/.tmp/alice/reviews/$SLUG/$BRANCH-reviews.jsonl" 2>/dev/null || echo "NO_REVIEWS"
+echo "---HEAD---"
+git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown"

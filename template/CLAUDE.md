@@ -1,0 +1,165 @@
+# {{PROJECT_NAME}} — Agent Operating Manual
+
+This file is the top-level briefing for any agent (Claude Code, Codex, etc.) working in this repo. Read it first every session. Deep content lives in `docs/wiki/**` — this file is the index and the load policy.
+
+> **Bootstrapped from [alice](https://github.com/{{ALICE_REMOTE_OR_LOCAL_PATH}})** — a generic agentic docs/plans/ledger framework. The framework payload lives at `.alice/`; agent-specific config dirs (`.claude/`, future `.codex/`, `.agents/`) symlink into it so the framework is shared across agents. Project-specific stack/domain rules live in this file and `docs/wiki/`.
+
+## What {{PROJECT_NAME}} is
+
+<2–4 sentences. What this project does, who uses it, what makes it distinct. Drop project-specific terminology that an outsider needs to know.>
+
+## Repo layout
+
+```
+{{PROJECT_LAYOUT_HERE}}
+docs/                 project operating manual (wiki + plans + ledger)
+  README.md             layout + load policy
+  todos/                live backlog (overview.md auto-loaded; per-TODO detail files load on demand)
+  wiki/                 stable knowledge, auto-loaded
+  plans/active/         in-flight features
+  plans/archive/        frozen post-ship (query-only)
+  ledger/               decisions + experiences (query-only)
+.alice/                 vendored alice framework (do not edit by hand — update from upstream)
+  rules/                binding rules
+  templates/            spec / decision / implementation / overview starters
+  commands/             slash commands (e.g. /plan)
+  skills/               skill source (qa, browse, review, plan-eng-review, investigate, ...)
+  bin/                  alice-* helper scripts
+.claude/                Claude Code config — thin shim of symlinks into .alice/
+  _alice    -> ../.alice
+  rules     -> ../.alice/rules
+  templates -> ../.alice/templates
+  commands  -> ../.alice/commands
+  skills/<name> -> ../../.alice/skills/<name>
+```
+
+## Stack
+
+<List languages, frameworks, key services for THIS repo — read package.json / pyproject.toml / wrangler.toml / next.config.* / etc. and write what's actually there. Examples below — replace with your reality, drop rows that don't apply, add rows that do.>
+
+- **Language:** TypeScript (or Python, Go, Rust, etc.)
+- **Backend:** <Cloudflare Workers + Hono | Fastify | Express | FastAPI | Rails | ...>
+- **Frontend:** <Next.js SSR | Next.js static export | Remix | SvelteKit | Astro | ...>
+- **DB:** <Postgres | D1 | KV | Mongo | ...>
+- **Test:** <vitest | jest | pytest | go test | ...>
+- **Deploy:** <Cloudflare | Vercel | Fly | ECS | Render | ...>
+
+Commands:
+
+```bash
+{{REPLACE_WITH_PROJECT_COMMANDS}}
+```
+
+Deep architecture: `docs/wiki/architecture.md`. Domain model: `docs/wiki/domain-model.md`.
+
+## Load policy (critical)
+
+| Path | Policy | When to use |
+|------|--------|-------------|
+| `CLAUDE.md` (this file) | auto-load | every session |
+| `docs/README.md` | auto-load | every session (layout + load policy detail) |
+| `docs/wiki/**` | auto-load | every session |
+| `docs/todos/overview.md` | auto-load | every session |
+| `docs/todos/<slug>.md` | load on demand | when working that specific TODO |
+| `docs/plans/active/<current>/overview.md` | auto-load | while feature in flight |
+| `docs/plans/active/<current>/{spec,decision,implementation}.md` | load on demand | during feature work |
+| `docs/plans/archive/**` | query-only | prior art, retro, reconstruction |
+| `docs/ledger/decisions.md` | query-only | before big architectural calls |
+| `docs/ledger/experiences.md` | query-only | before repeating a pattern that previously burned |
+| `.claude/rules/**` | load on demand | when about to do the thing the rule governs |
+| `.claude/templates/**` | load on demand | when creating a plan folder or ledger entry |
+
+Rule of thumb: auto-loaded set is small and current. Query-only set grows unbounded — pull in only when the question needs the history.
+
+## How to work (agent SOP)
+
+Pipeline for every non-trivial task. Each step has a skill or command — use them, don't freelance.
+
+1. **Orient.** Read `docs/wiki/current-status.md` and `docs/todos/overview.md`. Check if there's an active plan folder in `docs/plans/active/` already covering this task.
+2. **Plan the work — pick one entry point:**
+   - **New feature:** run `/plan` (`.claude/commands/plan.md`). It asks for problem/goal/scope/acceptance interactively, sweeps ledger + archive for prior art, scaffolds `docs/plans/active/YYYY-MM-DD_<slug>/` from `.claude/templates/`, and wires the entry into `docs/todos/overview.md` (and a per-TODO detail file at `docs/todos/<slug>.md` from `.claude/templates/todo.md`).
+   - **Known issue / bug:** run `/investigate`. Drive to a root-cause hypothesis, then scaffold a plan folder via `/plan <slug>` (issue-investigation variant — see `.claude/commands/plan.md`) so the fix lives on the same rails as a feature.
+3. **Review the plan.** Run `/plan-eng-review` on the draft spec. Lock in architecture, error handling, logging, test coverage, performance. Iterate until the user signs off. Set `spec.md` `Status: locked`.
+4. **Implement.** Only after sign-off. Follow `.claude/rules/implementation-quality.md`. Keep `implementation.md` up to date as you go. Grep ledger + archive before introducing new primitives.
+5. **Verify.** Build green, tests pass. UI work → `/qa` (or `browse` for targeted checks).
+6. **Review the diff.** Run `/review` on the change against base. Prefer running it via the Agent tool as a fresh sub-agent so the reviewing context isn't polluted by the implementation context.
+7. **Document.** Same PR: update wiki pages that drifted, per `.claude/rules/documentation-updates.md`.
+8. **Ship.** PR + merge + deploy.
+9. **Confirm done + retro.** Only after deploy health is green. Run the full `.claude/rules/post-feature-retro.md` checklist: archive move + wiki update + experiences append + decisions append + TODO strike. Until all five land, the feature isn't "done".
+
+## Rules pointer
+
+Every rule in `.claude/rules/` is **binding**. Load on demand when the rule's domain applies.
+
+- `docs-layout-and-load-policy.md` — the docs/ layout and auto-load/query-only policy.
+- `post-feature-retro.md` — the five-action checklist that fires on every ship.
+- `documentation-updates.md` — docs must land in the same PR as behavior changes.
+- `feature-spec-required.md` — spec before non-trivial code.
+- `implementation-quality.md` — the floor: build green, reuse first, small PRs, no silent failures, boundaries validate.
+
+## Working style
+
+- **Plan before code.** Spec → sign-off → code. Non-trivial work gets a plan folder.
+- **Reuse before invention.** Grep ledger + archive + wiki before writing a new primitive.
+- **Small changes.** Prefer 5 small PRs to 1 big one. Big PRs hide regressions.
+- **Docs honest.** Wiki says what exists now. Ripped features get their wiki page ripped with them.
+- **Build green.** Red CI blocks merge. Fix CI first.
+- **Ask when it's irreversible.** Deploys, destructive ops, force-pushes — confirm first even if allowed.
+
+## Critical gotchas (project-specific — fill in as you find them)
+
+These are the non-obvious invariants that have burned this codebase. Keep them inline, don't hide them in the wiki. Add one each time something surprising bites you.
+
+- <gotcha 1 — e.g. "Cloudflare Workers have no Node `fs` — bundler must be `esbuild` not `node-builtin`">
+- <gotcha 2 — e.g. "Drizzle migrations require `db:generate` before `db:push` or schema drifts">
+- <gotcha 3>
+
+## Skill routing
+
+When the user's request matches a skill, invoke it via the Skill tool **before** other actions.
+
+The project ships a small, project-local set of skills under `.alice/skills/` (symlinked into `.claude/skills/`). Everything is project-scoped — skills write to `<project-root>/.tmp/`, never to `~/.claude/`.
+
+| Request shape | Skill |
+|---------------|-------|
+| New feature — draft spec with user + scaffold plan folder | `/plan` (`.claude/commands/plan.md`) |
+| Bugs, errors, "why is this broken", stack traces | `investigate` (wrap the fix in a plan folder via `/plan` issue-variant when non-trivial) |
+| QA / test the UI / dogfood a flow / screenshot evidence | `qa` (use `--report-only` for no-fix mode) |
+| Browser control (raw primitives, not a full QA sweep) | `browse` |
+| Import real-browser cookies for authed QA | `setup-browser-cookies` |
+| Pre-landing PR / diff review | `review` |
+| Pre-implementation architecture review | `plan-eng-review` |
+| Security audit — secrets, dependencies, CI/CD, OWASP, LLM trust | `security-audit` |
+
+**Browser choice — cmux vs. headless browse.** When the dev is running inside the **cmux CLI**, prefer cmux's built-in visible browser for interactive testing — it catches UX issues (hover, focus rings, scroll position) that headless rendering can mask. Fall back to the `browse` skill (headless) when running in CI, when cmux isn't available, or for screenshot-diff regression runs.
+
+**Project-local state.** Any skill that needs scratch space writes to `<project-root>/.tmp/` (gitignored, per-checkout). Never `~/.claude/`, never user-home.
+
+## Definition of done
+
+### Pre-PR
+
+- [ ] Build green locally, tests pass.
+- [ ] For non-trivial change: plan folder exists, spec locked.
+- [ ] Wiki pages updated for any behavior / schema / contract change.
+- [ ] No stale `// removed`, unused `_vars`, or speculative scaffolding.
+- [ ] Critical gotchas respected.
+
+### Post-ship
+
+- [ ] Plan folder archived: `git mv docs/plans/active/<folder> docs/plans/archive/<folder>`.
+- [ ] `docs/wiki/current-status.md` updated (in flight → shipped).
+- [ ] `docs/ledger/experiences.md` retro entry appended.
+- [ ] `docs/ledger/decisions.md` entry appended for any non-obvious choice.
+- [ ] `docs/todos/overview.md` struck (in-flight → Done recent), per-TODO detail file `docs/todos/<slug>.md` deleted.
+
+## When to update this file
+
+- Repo layout changes (new package, moved directories).
+- New binding rule added to `.claude/rules/`.
+- Stack change (new framework, dropped dependency, new DB).
+- New branching or deploy convention.
+- Load policy change (new path added to auto-load / query-only).
+- A critical gotcha emerges from a burn. Log it here so future-agent doesn't repeat it.
+
+Everything else belongs in `docs/wiki/**` or the ledger, not here.

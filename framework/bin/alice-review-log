@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# alice-review-log — atomically log a review result to project-local state.
+# Usage: alice-review-log '{"skill":"...","timestamp":"...","status":"..."}'
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+eval "$("$SCRIPT_DIR/alice-slug" 2>/dev/null)"
+LOG_DIR="$ROOT/.tmp/alice/reviews/$SLUG"
+mkdir -p "$LOG_DIR"
+INPUT="$1"
+if ! printf '%s' "$INPUT" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{try{JSON.parse(s)}catch(e){process.exit(1)}})" 2>/dev/null; then
+  echo "alice-review-log: invalid JSON, skipping" >&2
+  exit 1
+fi
+echo "$INPUT" >> "$LOG_DIR/$BRANCH-reviews.jsonl"
