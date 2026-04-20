@@ -48,7 +48,7 @@ Before reviewing code quality, check: **did they build what was requested — no
 
 1. Read `docs/todos/overview.md` (if it exists). Read PR description (`gh pr view --json body --jq .body 2>/dev/null || true`).
    Read commit messages (`git log origin/<base>..HEAD --oneline`).
-   **If no PR exists:** rely on commit messages and docs/todos/overview.md for stated intent — this is the common case since /review runs before /ship creates the PR.
+   **If no PR exists:** rely on commit messages, the matching `docs/todos/<slug>.md` (if any), and the active plan folder's `docs/plans/active/<slug>/spec.md` for stated intent — this is the common case since `/review` runs before the PR is opened.
 2. Identify the **stated intent** — what was this branch supposed to accomplish?
 3. Run `git diff origin/<base>...HEAD --stat` and compare the files changed against the stated intent.
 
@@ -56,7 +56,7 @@ Before reviewing code quality, check: **did they build what was requested — no
 
 1. **Conversation context (primary):** Check if there is an active plan file in this conversation. The host agent's system messages include plan file paths when in plan mode. If found, use it directly — this is the most reliable signal.
 
-2. **Content-based search (fallback):** If no plan file is referenced in conversation context, search by content:
+2. **Content-based search (fallback):** If no plan file is referenced in conversation context, search alice's repo-local plan locations:
 
 ```bash
 setopt +o nomatch 2>/dev/null || true  # zsh compat
@@ -65,14 +65,22 @@ REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")
 # Compute project slug for .tmp/projects/ lookup
 _PLAN_SLUG=$(git remote get-url origin 2>/dev/null | sed 's|.*[:/]\([^/]*/[^/]*\)\.git$|\1|;s|.*[:/]\([^/]*/[^/]*\)$|\1|' | tr '/' '-' | tr -cd 'a-zA-Z0-9._-') || true
 _PLAN_SLUG="${_PLAN_SLUG:-$(basename "$PWD" | tr -cd 'a-zA-Z0-9._-')}"
-# Search common plan file locations (project designs first, then personal/local)
-for PLAN_DIR in ".tmp/projects/$_PLAN_SLUG" "$HOME/.claude/plans" "$HOME/.codex/plans" ".tmp/plans"; do
-  [ -d "$PLAN_DIR" ] || continue
-  PLAN=$(ls -t "$PLAN_DIR"/*.md 2>/dev/null | xargs grep -l "$BRANCH" 2>/dev/null | head -1)
-  [ -z "$PLAN" ] && PLAN=$(ls -t "$PLAN_DIR"/*.md 2>/dev/null | xargs grep -l "$REPO" 2>/dev/null | head -1)
-  [ -z "$PLAN" ] && PLAN=$(find "$PLAN_DIR" -name '*.md' -mmin -1440 -maxdepth 1 2>/dev/null | xargs ls -t 2>/dev/null | head -1)
-  [ -n "$PLAN" ] && break
+# Search repo-local plan locations only — alice never reads from $HOME or user-global dirs.
+# Priority: active feature plan folder (spec.md for the current branch) → ephemeral scratch plans.
+PLAN=""
+for ACTIVE in docs/plans/active/*/spec.md; do
+  [ -f "$ACTIVE" ] || continue
+  grep -lq "$BRANCH" "$ACTIVE" && PLAN="$ACTIVE" && break
 done
+if [ -z "$PLAN" ]; then
+  for PLAN_DIR in ".tmp/projects/$_PLAN_SLUG" ".tmp/plans"; do
+    [ -d "$PLAN_DIR" ] || continue
+    PLAN=$(ls -t "$PLAN_DIR"/*.md 2>/dev/null | xargs grep -l "$BRANCH" 2>/dev/null | head -1)
+    [ -z "$PLAN" ] && PLAN=$(ls -t "$PLAN_DIR"/*.md 2>/dev/null | xargs grep -l "$REPO" 2>/dev/null | head -1)
+    [ -z "$PLAN" ] && PLAN=$(find "$PLAN_DIR" -name '*.md' -mmin -1440 -maxdepth 1 2>/dev/null | xargs ls -t 2>/dev/null | head -1)
+    [ -n "$PLAN" ] && break
+  done
+fi
 [ -n "$PLAN" ] && echo "PLAN_FILE: $PLAN" || echo "NO_PLAN_FILE"
 ```
 
@@ -300,7 +308,7 @@ source <(.alice/bin/alice-diff-scope <base> 2>/dev/null)
 6. **Log the result** for the Review Readiness Dashboard:
 
 ```bash
-.alice/bin/alice-review-log '{"skill":"design-review-lite","timestamp":"TIMESTAMP","status":"STATUS","findings":N,"auto_fixed":M,"commit":"COMMIT"}'
+.alice/bin/alice-review-log '{"skill":"review","pass":"design-lite","timestamp":"TIMESTAMP","status":"STATUS","findings":N,"auto_fixed":M,"commit":"COMMIT"}'
 ```
 
 Substitute: TIMESTAMP = ISO 8601 datetime, STATUS = "clean" if 0 findings or "issues_found", N = total findings, M = auto-fixed count, COMMIT = output of `git rev-parse --short HEAD`.
@@ -514,10 +522,10 @@ If coverage is below the minimum threshold, output a prominent warning **before*
 
 ```
 ⚠️ COVERAGE WARNING: AI-assessed coverage is {X}%. {N} code paths untested.
-Consider writing tests before running /ship.
+Consider writing tests before opening the PR.
 ```
 
-This is INFORMATIONAL — does not block /review. But it makes low coverage visible early so the developer can address it before reaching the /ship coverage gate.
+This is INFORMATIONAL — does not block `/review`. It makes low coverage visible early so the developer can address it before the PR is open.
 
 If coverage percentage cannot be determined, skip the warning silently.
 
@@ -629,9 +637,9 @@ Cross-reference the diff against documentation files. For each `.md` file in the
 
 1. Check if code changes in the diff affect features, components, or workflows described in that doc file.
 2. If the doc file was NOT updated in this branch but the code it describes WAS changed, flag it as an INFORMATIONAL finding:
-   "Documentation may be stale: [file] describes [feature/component] but code changed in this branch. Consider running `/document-release`."
+   "Documentation may be stale: [file] describes [feature/component] but code changed in this branch. Update the affected wiki page in the same PR per `.claude/rules/documentation-updates.md`."
 
-This is informational only — never critical. The fix action is `/document-release`.
+This is informational only — never critical. The fix action is to update the wiki page in the same PR (see `.claude/rules/documentation-updates.md`).
 
 If no documentation files exist, skip this step silently.
 
@@ -701,7 +709,7 @@ If the subagent fails or times out: "Claude adversarial subagent unavailable. Co
 
 **Persist the review result:**
 ```bash
-.alice/bin/alice-review-log '{"skill":"adversarial-review","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","tier":"medium","commit":"'"$(git rev-parse --short HEAD)"'"}'
+.alice/bin/alice-review-log '{"skill":"review","pass":"adversarial","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","tier":"medium","commit":"'"$(git rev-parse --short HEAD)"'"}'
 ```
 Substitute STATUS: "clean" if no findings, "issues_found" if findings exist. SOURCE: "codex" if Codex ran, "claude" if subagent ran. If both failed, do NOT persist.
 
@@ -746,7 +754,7 @@ If Codex is not available for steps 1 and 3, note to the user: "Codex CLI not fo
 
 **Persist the review result AFTER all passes complete** (not after each sub-step):
 ```bash
-.alice/bin/alice-review-log '{"skill":"adversarial-review","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","tier":"large","gate":"GATE","commit":"'"$(git rev-parse --short HEAD)"'"}'
+.alice/bin/alice-review-log '{"skill":"review","pass":"adversarial","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","tier":"large","gate":"GATE","commit":"'"$(git rev-parse --short HEAD)"'"}'
 ```
 Substitute: STATUS = "clean" if no findings across ALL passes, "issues_found" if any pass found issues. SOURCE = "both" if Codex ran, "claude" if only Claude subagent ran. GATE = the Codex structured review gate result ("pass"/"fail"), or "informational" if Codex was unavailable. If all passes failed, do NOT persist.
 
@@ -771,10 +779,9 @@ High-confidence findings (agreed on by multiple sources) should be prioritized f
 
 ---
 
-## Step 5.8: Persist Eng Review result
+## Step 5.8: Persist Diff Review result
 
-After all review passes complete, persist the final `/review` outcome so `/ship` can
-recognize that Eng Review was run on this branch.
+After all review passes complete, persist the final `/review` outcome. The `plan-eng-review` Review Readiness Dashboard reads this to tell the user whether the branch is `CLEARED for merge`.
 
 Run:
 
@@ -793,7 +800,7 @@ Substitute:
 ## Important Rules
 
 - **Read the FULL diff before commenting.** Do not flag issues already addressed in the diff.
-- **Fix-first, not read-only.** AUTO-FIX items are applied directly. ASK items are only applied after user approval. Never commit, push, or create PRs — that's /ship's job.
+- **Fix-first, not read-only.** AUTO-FIX items are applied directly. ASK items are only applied after user approval. Never commit, push, or create PRs — those are outside this skill's scope.
 - **Be terse.** One line problem, one line fix. No preamble.
 - **Only flag real problems.** Skip anything that's fine.
 - **Use Greptile reply templates from greptile-triage.md.** Every reply includes evidence. Never post vague replies.

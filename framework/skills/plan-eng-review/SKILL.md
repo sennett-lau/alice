@@ -9,7 +9,6 @@ description: |
   "review the architecture", "engineering review", or "lock in the plan".
   Proactively suggest when the user has a plan or design doc and is about to
   start coding — to catch architecture issues before implementation.
-benefits-from: [office-hours]
 allowed-tools:
   - Read
   - Write
@@ -84,61 +83,11 @@ DESIGN=$(ls -t .tmp/projects/$SLUG/*-$BRANCH-design-*.md 2>/dev/null | head -1)
 ```
 If a design doc exists, read it. Use it as the source of truth for the problem statement, constraints, and chosen approach. If it has a `Supersedes:` field, note that this is a revised design — check the prior version for context on what changed and why.
 
-## Prerequisite Skill Offer
+## When no spec exists
 
-When the design doc check above prints "No design doc found," offer the prerequisite
-skill before proceeding.
+If `/plan-eng-review` is invoked on a branch without a locked spec in `docs/plans/active/<slug>/spec.md`, tell the user: "No locked spec found for this branch. For non-trivial work, run `/plan` first — it produces the problem/goal/scope/acceptance/assumptions/verification-map artifact this review attacks. Want me to hand off to `/plan` now, or proceed with a standard review against the diff + commit messages?"
 
-Say to the user via AskUserQuestion:
-
-> "No design doc found for this branch. `/office-hours` produces a structured problem
-> statement, premise challenge, and explored alternatives — it gives this review much
-> sharper input to work with. Takes about 10 minutes. The design doc is per-feature,
-> not per-product — it captures the thinking behind this specific change."
-
-Options:
-- A) Run /office-hours now (we'll pick up the review right after)
-- B) Skip — proceed with standard review
-
-If they skip: "No worries — standard review. If you ever want sharper input, try
-/office-hours first next time." Then proceed normally. Do not re-offer later in the session.
-
-If they choose A:
-
-Say: "Running /office-hours inline. Once the design doc is ready, I'll pick up
-the review right where we left off."
-
-Read the `/office-hours` skill file at `.alice/skills/office-hours/SKILL.md` using the Read tool.
-
-**If unreadable:** Skip with "Could not load /office-hours — skipping." and continue.
-
-Follow its instructions from top to bottom, **skipping these sections** (already handled by the parent skill):
-- Preamble (run first)
-- AskUserQuestion Format
-- Completeness Principle — Boil the Lake
-- Search Before Building
-- Contributor Mode
-- Completion Status Protocol
-- Step 0: Detect platform and base branch
-- Review Readiness Dashboard
-- Plan File Review Report
-- Prerequisite Skill Offer
-- Plan Status Footer
-
-Execute every other section at full depth. When the loaded skill's instructions are complete, continue with the next step below.
-
-After /office-hours completes, re-run the design doc check:
-```bash
-setopt +o nomatch 2>/dev/null || true  # zsh compat
-SLUG=$(.alice/skills/browse/bin/remote-slug 2>/dev/null || basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
-BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | tr '/' '-' || echo 'no-branch')
-DESIGN=$(ls -t .tmp/projects/$SLUG/*-$BRANCH-design-*.md 2>/dev/null | head -1)
-[ -z "$DESIGN" ] && DESIGN=$(ls -t .tmp/projects/$SLUG/*-design-*.md 2>/dev/null | head -1)
-[ -n "$DESIGN" ] && echo "Design doc found: $DESIGN" || echo "No design doc found"
-```
-
-If a design doc is now found, read it and continue the review.
-If none was produced (user may have cancelled), proceed with standard review.
+Wait for the answer. If they run `/plan`, pick up here after it's locked. Otherwise proceed with standard review — the rigor bars below still apply; they just apply against commit messages and PR description instead of a spec.
 
 ### Step 0: Scope Challenge
 Before reviewing anything, answer these questions:
@@ -376,7 +325,7 @@ The plan should be complete enough that when implementation begins, every test i
 
 ### Test Plan Artifact
 
-After producing the coverage diagram, write a test plan artifact to the project directory so `/qa` and `/qa-only` can consume it as primary test input:
+After producing the coverage diagram, write a test plan artifact to the project directory so `/qa` (pass `--report-only` for no-fix mode) can consume it as primary test input:
 
 ```bash
 eval "$(.alice/bin/alice-slug 2>/dev/null)" && mkdir -p .tmp/projects/$SLUG
@@ -405,7 +354,7 @@ Repo: {owner/repo}
 - {end-to-end flow that must work}
 ```
 
-This file is consumed by `/qa` and `/qa-only` as primary test input. Include only the information that helps a QA tester know **what to test and where** — not implementation details.
+This file is consumed by `/qa` (pass `--report-only` for no-fix mode) as primary test input. Include only the information that helps a QA tester know **what to test and where** — not implementation details.
 
 For LLM/prompt changes: check the "Prompt/LLM changes" file patterns listed in CLAUDE.md. If this plan touches ANY of those patterns, state which eval suites must be run, which cases should be added, and what baselines to compare against. Then use AskUserQuestion to confirm the eval scope with the user.
 
@@ -543,7 +492,7 @@ If no tension points exist, note: "No cross-model tension — both reviewers agr
 
 **Persist the result:**
 ```bash
-.alice/bin/alice-review-log '{"skill":"codex-plan-review","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","commit":"'"$(git rev-parse --short HEAD)"'"}'
+.alice/bin/alice-review-log '{"skill":"plan-eng-review-outside-voice","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","commit":"'"$(git rev-parse --short HEAD)"'"}'
 ```
 
 Substitute: STATUS = "clean" if no findings, "issues_found" if findings exist.
@@ -688,17 +637,17 @@ Substitute values from the Completion Summary:
 
 ## Review Readiness Dashboard
 
-After completing the review, read the review log and config to display the dashboard.
+After completing the review, read the review log to display the dashboard.
 
 ```bash
 .alice/bin/alice-review-read
 ```
 
-Parse the output. Find the most recent entry for each skill (plan-ceo-review, plan-eng-review, review, plan-design-review, design-review-lite, adversarial-review, codex-review, codex-plan-review). Ignore entries with timestamps older than 7 days. For the Eng Review row, show whichever is more recent between `review` (diff-scoped pre-landing review) and `plan-eng-review` (plan-stage architecture review). Append "(DIFF)" or "(PLAN)" to the status to distinguish. For the Adversarial row, show whichever is more recent between `adversarial-review` (new auto-scaled) and `codex-review` (legacy). For Design Review, show whichever is more recent between `plan-design-review` (full visual audit) and `design-review-lite` (code-level check). Append "(FULL)" or "(LITE)" to the status to distinguish. For the Outside Voice row, show the most recent `codex-plan-review` entry — this captures outside voices from both /plan-ceo-review and /plan-eng-review.
+Parse the output. Find the most recent entry within the last 7 days for each alice review skill:
 
-**Source attribution:** If the most recent entry for a skill has a \`"via"\` field, append it to the status label in parentheses. Examples: `plan-eng-review` with `via:"autoplan"` shows as "CLEAR (PLAN via /autoplan)". `review` with `via:"ship"` shows as "CLEAR (DIFF via /ship)". Entries without a `via` field show as "CLEAR (PLAN)" or "CLEAR (DIFF)" as before.
-
-Note: `autoplan-voices` and `design-outside-voices` entries are audit-trail-only (forensic data for cross-model consensus analysis). They do not appear in the dashboard and are not checked by any consumer.
+- `plan-eng-review` — plan-stage architecture review (this skill).
+- `review` — diff-scoped pre-landing review (`/review` on a branch).
+- `plan-eng-review-outside-voice` — optional second opinion from a different AI model, dispatched from within this skill's Outside Voice section.
 
 Display:
 
@@ -706,120 +655,80 @@ Display:
 +====================================================================+
 |                    REVIEW READINESS DASHBOARD                       |
 +====================================================================+
-| Review          | Runs | Last Run            | Status    | Required |
+| Review          | Runs | Last Run            | Status    | Gates?   |
 |-----------------|------|---------------------|-----------|----------|
-| Eng Review      |  1   | 2026-03-16 15:00    | CLEAR     | YES      |
-| CEO Review      |  0   | —                   | —         | no       |
-| Design Review   |  0   | —                   | —         | no       |
-| Adversarial     |  0   | —                   | —         | no       |
+| Plan Review     |  1   | 2026-04-19 15:00    | CLEAR     | YES      |
+| Diff Review     |  0   | —                   | —         | YES      |
 | Outside Voice   |  0   | —                   | —         | no       |
 +--------------------------------------------------------------------+
-| VERDICT: CLEARED — Eng Review passed                                |
+| VERDICT: CLEARED for implementation — Plan Review passed            |
 +====================================================================+
 ```
 
-**Review tiers:**
-- **Eng Review (required by default):** The only review that gates shipping. Covers architecture, code quality, tests, performance. Can be disabled globally with 
-- **CEO Review (optional):** Use your judgment. Recommend it for big product/business changes, new user-facing features, or scope decisions. Skip for bug fixes, refactors, infra, and cleanup.
-- **Design Review (optional):** Use your judgment. Recommend it for UI/UX changes. Skip for backend-only, infra, or prompt-only changes.
-- **Adversarial Review (automatic):** Auto-scales by diff size. Small diffs (<50 lines) skip adversarial. Medium diffs (50–199) get cross-model adversarial. Large diffs (200+) get all 4 passes: Claude structured, Codex structured, Claude adversarial subagent, Codex adversarial. No configuration needed.
-- **Outside Voice (optional):** Independent plan review from a different AI model. Offered after all review sections complete in /plan-ceo-review and /plan-eng-review. Falls back to Claude subagent if Codex is unavailable. Never gates shipping.
-
 **Verdict logic:**
-- **CLEARED**: Eng Review has >= 1 entry within 7 days from either \`review\` or \`plan-eng-review\` with status "clean" (or \`skip_eng_review\` is \`true\`)
-- **NOT CLEARED**: Eng Review missing, stale (>7 days), or has open issues
-- CEO, Design, and Codex reviews are shown for context but never block shipping
-- If \`skip_eng_review\` config is \`true\`, Eng Review shows "SKIPPED (global)" and verdict is CLEARED
+- **CLEARED for implementation**: `plan-eng-review` has ≥1 entry within 7 days with status `clean`.
+- **NOT CLEARED**: Plan Review missing, stale (>7 days), or has open issues.
+- **CLEARED for merge**: requires both Plan Review (if spec exists) AND Diff Review (`/review`) to be clean on the current HEAD.
+- Outside Voice is shown for context but never gates.
 
-**Staleness detection:** After displaying the dashboard, check if any existing reviews may be stale:
-- Parse the \`---HEAD---\` section from the bash output to get the current HEAD commit hash
-- For each review entry that has a \`commit\` field: compare it against the current HEAD. If different, count elapsed commits: \`git rev-list --count STORED_COMMIT..HEAD\`. Display: "Note: {skill} review from {date} may be stale — {N} commits since review"
-- For entries without a \`commit\` field (legacy entries): display "Note: {skill} review from {date} has no commit tracking — consider re-running for accurate staleness detection"
-- If all reviews match the current HEAD, do not display any staleness notes
+**Staleness detection:** After displaying the dashboard, check if reviews may be stale against the current HEAD:
+- Parse the `---HEAD---` section from the bash output to get the current HEAD short-SHA.
+- For each entry with a `commit` field: if it differs from HEAD, count elapsed commits with `git rev-list --count STORED_COMMIT..HEAD` and print: `Note: {skill} from {date} may be stale — {N} commits since review`.
+- Entries without a `commit` field: print `Note: {skill} from {date} predates commit tracking — consider re-running`.
+- If all match HEAD, print nothing.
 
 ## Plan File Review Report
 
-After displaying the Review Readiness Dashboard in conversation output, also update the
-**plan file** itself so review status is visible to anyone reading the plan.
+After the dashboard, also write the review status into the **plan file** so it's visible to anyone reading the plan.
 
 ### Detect the plan file
 
-1. Check if there is an active plan file in this conversation (the host provides plan file
-   paths in system messages — look for plan file references in the conversation context).
+1. Check if there's an active plan file in the conversation (host provides plan file paths in system messages).
 2. If not found, skip this section silently — not every review runs in plan mode.
 
 ### Generate the report
 
-Read the review log output you already have from the Review Readiness Dashboard step above.
-Parse each JSONL entry. Each skill logs different fields:
+Parse each JSONL entry from the review log. Alice's reviews log these fields:
 
-- **plan-ceo-review**: \`status\`, \`unresolved\`, \`critical_gaps\`, \`mode\`, \`scope_proposed\`, \`scope_accepted\`, \`scope_deferred\`, \`commit\`
-  → Findings: "{scope_proposed} proposals, {scope_accepted} accepted, {scope_deferred} deferred"
-  → If scope fields are 0 or missing (HOLD/REDUCTION mode): "mode: {mode}, {critical_gaps} critical gaps"
-- **plan-eng-review**: \`status\`, \`unresolved\`, \`critical_gaps\`, \`issues_found\`, \`mode\`, \`commit\`
-  → Findings: "{issues_found} issues, {critical_gaps} critical gaps"
-- **plan-design-review**: \`status\`, \`initial_score\`, \`overall_score\`, \`unresolved\`, \`decisions_made\`, \`commit\`
-  → Findings: "score: {initial_score}/10 → {overall_score}/10, {decisions_made} decisions"
-- **codex-review**: \`status\`, \`gate\`, \`findings\`, \`findings_fixed\`
-  → Findings: "{findings} findings, {findings_fixed}/{findings} fixed"
+- **plan-eng-review**: `status`, `unresolved`, `critical_gaps`, `issues_found`, `mode`, `commit` → Findings: `{issues_found} issues, {critical_gaps} critical gaps`
+- **review**: `status`, `issues_found`, `critical`, `informational`, `commit` → Findings: `{issues_found} issues ({critical} critical)`
+- **plan-eng-review-outside-voice**: `status`, `source`, `commit` → Findings: `source: {source}`
 
-All fields needed for the Findings column are now present in the JSONL entries.
-For the review you just completed, you may use richer details from your own Completion
-Summary. For prior reviews, use the JSONL fields directly — they contain all required data.
+For the review you just completed, use richer details from your own Completion Summary. For prior reviews in the log, use the JSONL fields directly.
 
-Produce this markdown table:
+Produce this markdown block:
 
-\`\`\`markdown
+```markdown
 ## REVIEW REPORT
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
-| CEO Review | \`/plan-ceo-review\` | Scope & strategy | {runs} | {status} | {findings} |
-| Codex Review | \`/codex review\` | Independent 2nd opinion | {runs} | {status} | {findings} |
-| Eng Review | \`/plan-eng-review\` | Architecture & tests (required) | {runs} | {status} | {findings} |
-| Design Review | \`/plan-design-review\` | UI/UX gaps | {runs} | {status} | {findings} |
-\`\`\`
+| Plan Review    | `/plan-eng-review`          | Architecture & test coverage (gates implementation) | {runs} | {status} | {findings} |
+| Diff Review    | `/review`                   | Pre-landing diff review (gates merge)               | {runs} | {status} | {findings} |
+| Outside Voice  | optional, inside this skill | Independent 2nd opinion from a different AI model   | {runs} | {status} | {findings} |
+```
 
 Below the table, add these lines (omit any that are empty/not applicable):
 
-- **CODEX:** (only if codex-review ran) — one-line summary of codex fixes
-- **CROSS-MODEL:** (only if both Claude and Codex reviews exist) — overlap analysis
-- **UNRESOLVED:** total unresolved decisions across all reviews
-- **VERDICT:** list reviews that are CLEAR (e.g., "CEO + ENG CLEARED — ready to implement").
-  If Eng Review is not CLEAR and not skipped globally, append "eng review required".
+- **UNRESOLVED:** total unresolved decisions across all reviews.
+- **VERDICT:** `CLEARED for implementation` if Plan Review is clean; add `CLEARED for merge` if Diff Review is also clean on HEAD. Otherwise name what's blocking.
 
 ### Write to the plan file
 
-**PLAN MODE EXCEPTION — ALWAYS RUN:** This writes to the plan file, which is the one
-file you are allowed to edit in plan mode. The plan file review report is part of the
-plan's living status.
+**PLAN MODE EXCEPTION — ALWAYS RUN:** This writes to the plan file, which is the one file you're allowed to edit in plan mode. The plan file review report is part of the plan's living status.
 
-- Search the plan file for a \`## REVIEW REPORT\` section **anywhere** in the file
-  (not just at the end — content may have been added after it).
-- If found, **replace it** entirely using the Edit tool. Match from \`## REVIEW REPORT\`
-  through either the next \`## \` heading or end of file, whichever comes first. This ensures
-  content added after the report section is preserved, not eaten. If the Edit fails
-  (e.g., concurrent edit changed the content), re-read the plan file and retry once.
-- If no such section exists, **append it** to the end of the plan file.
-- Always place it as the very last section in the plan file. If it was found mid-file,
-  move it: delete the old location and append at the end.
+- Search the plan file for a `## REVIEW REPORT` section anywhere in the file.
+- If found, **replace it** entirely using Edit (match from `## REVIEW REPORT` through either the next `## ` heading or end of file, whichever comes first — this preserves content added after the report).
+- If absent, **append it** to the end of the plan file.
+- Always place the review report as the last section. If it was mid-file, delete the old location and append at the end.
 
-## Next Steps — Review Chaining
+## Next Steps
 
-After displaying the Review Readiness Dashboard, check if additional reviews would be valuable. Read the dashboard output to see which reviews have already been run and whether they are stale.
+After the dashboard:
 
-**Suggest /plan-design-review if UI changes exist and no design review has been run** — detect from the test diagram, architecture review, or any section that touched frontend components, CSS, views, or user-facing interaction flows. If an existing design review's commit hash shows it predates significant changes found in this eng review, note that it may be stale.
-
-**Mention /plan-ceo-review if this is a significant product change and no CEO review exists** — this is a soft suggestion, not a push. CEO review is optional. Only mention it if the plan introduces new user-facing features, changes product direction, or expands scope substantially.
-
-**Note staleness** of existing CEO or design reviews if this eng review found assumptions that contradict them, or if the commit hash shows significant drift.
-
-**If no additional reviews are needed** (or `skip_eng_review` is `true` in the dashboard config, meaning this eng review was optional): state "All relevant reviews complete. Run /ship when ready."
-
-Use AskUserQuestion with only the applicable options:
-- **A)** Run /plan-design-review (only if UI scope detected and no design review exists)
-- **B)** Run /plan-ceo-review (only if significant product change and no CEO review exists)
-- **C)** Ready to implement — run /ship when done
+- If the review is **CLEARED for implementation**, tell the user they're ready to start coding against the locked spec. Remind them to run `/review` before opening the PR.
+- If the review is **NOT CLEARED**, summarize the blocking issues in one line each and wait for the user to resolve them.
+- If a Diff Review entry already exists for the current HEAD and is clean, state `CLEARED for merge` and stop.
 
 ## Unresolved decisions
 If the user does not respond to an AskUserQuestion or interrupts to move on, note which decisions were left unresolved. At the end of the review, list these as "Unresolved decisions that may bite you later" — never silently default to an option.

@@ -183,8 +183,7 @@ lean toward AUTO-FIX (they're more mechanical).
 
 ## Fix-First Heuristic
 
-This heuristic is referenced by both `/review` and `/ship`. It determines whether
-the agent auto-fixes a finding or asks the user.
+This heuristic is referenced by `/review`. It determines whether the agent auto-fixes a finding or asks the user.
 
 ```
 AUTO-FIX (agent fixes without asking):     ASK (needs human judgment):
