@@ -57,6 +57,12 @@ Things that were considered and deliberately dropped:
 
 If a new proposal smells like one of these, push back. If it's genuinely a universal addition, argue the case.
 
+## Releasing alice
+
+Alice's own version lives in `VERSION` at the repo root (single line, semver, no leading `v`). The `/release` command at `.claude/commands/release.md` runs the full flow: sync `development`, bump `VERSION` with a commit, merge to `main`, tag with a description built from the commit log since the last tag, push both refs.
+
+`VERSION` and `.claude/commands/release.md` are **alice-local** — they do not ship to adopters via the bootstrap recipe. Adopters own their own release/deploy story (see "What NOT to add"). Do not move either into `framework/` or `template/`.
+
 ## Provenance
 
 Distilled from an internal project's agent operating manual on 2026-04-20. The five binding rules, templates, `/plan` command, and skill suite were ported with all project-specific content stripped out. State paths and bin scripts were rebranded to `.alice/` / `alice-*`. If you see ghosts of the original project in commit history (chain-specific rules, stack profiles, gstack wording, root-level `TODOS.md`), re-read why they were removed before bringing anything back.
