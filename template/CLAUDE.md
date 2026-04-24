@@ -101,6 +101,7 @@ Every rule in `.claude/rules/` is **binding**. Load on demand when the rule's do
 - `documentation-updates.md` — docs must land in the same PR as behavior changes.
 - `feature-spec-required.md` — spec before non-trivial code.
 - `implementation-quality.md` — the floor: build green, reuse first, small PRs, no silent failures, boundaries validate.
+- `sub-agent-orchestration.md` — any skill that dispatches sub-agents must poll them (≥1/min) for progress and escalate permission blocks to the user rather than silently working around.
 
 ## Working style
 
@@ -123,6 +124,28 @@ These are the non-obvious invariants that have burned this codebase. Keep them i
 - <gotcha 2 — e.g. "Drizzle migrations require `db:generate` before `db:push` or schema drifts">
 - <gotcha 3>
 
+## Migration-class files
+
+Files that are hard to revert once deployed, or that cause rebase pain when multiple PRs touch adjacent content. The `/pr-slicer` skill reads this list and forces matching files into a dedicated migration PR that lands first — other slices rebase on top cleanly.
+
+The idea: if a later slice goes wrong, you can revert it without rolling back the infra / schema change. Parallel PRs don't fight over sensitive files. The migration PR gets focused review (often the highest-risk change in the stack).
+
+**Fill in patterns that apply to this repo.** Delete the example rows that don't apply. Leave the section present (even empty) so `/pr-slicer` doesn't re-prompt every run.
+
+- `<pattern>` — <why it's migration-class>
+- <e.g. `packages/backend/drizzle/**/*.sql` — DB migrations, order-sensitive, not safely revertible after deploy>
+- <e.g. `wrangler.toml` — Cloudflare Worker config, conflict-prone across PRs>
+- <e.g. `terraform/**/*.tf` — infra state, apply-only-forward>
+- <e.g. `.env.example` — env schema, consumers rebase on additions>
+
+### Collapse / regeneration procedure
+
+If any of the above involve generation (DDL produced by an ORM, config compiled from source, lock files regenerated from a manifest), document the canonical procedure the `/pr-slicer` migration spec should follow. Example:
+
+> After merging schema changes from the source branch, run `<tool-specific regen command>` to produce a single clean migration file. Verify `<sequence / format check>`. If broken, delete + re-regen — never hand-edit generated migrations.
+
+If no generation step applies, write `None — migration files are authored directly.`
+
 ## Skill routing
 
 When the user's request matches a skill, invoke it via the Skill tool **before** other actions.
@@ -141,6 +164,7 @@ The project ships a small, project-local set of skills under `.alice/skills/` (s
 | Security audit — secrets, dependencies, CI/CD, OWASP, LLM trust | `security-audit` |
 | Multi-source research with citations — web synthesis, competitive / market / tech scan | `research` |
 | Pull the latest alice framework into `.alice/` (sync skills, commands, agents, migrations) | `/sync` (`.alice/commands/sync.md`) |
+| Slice a large branch / PR into a chain of smaller reviewable PRs with a migration PR first, parallel-safe siblings, and a per-PR review gate | `/pr-slicer` |
 
 **Project-local state.** Any skill that needs scratch space writes to `<project-root>/.tmp/` (gitignored, per-checkout). Never `~/.claude/`, never user-home.
 
@@ -159,6 +183,7 @@ The framework also ships sub-agents under `.alice/agents/` (symlinked into `.cla
 | `refactor-cleaner` | suspected dead code, unused deps, duplication — not during active feature work | on-demand only |
 | `seo-specialist` | web-facing pages / marketing sites — meta tags, structured data, Core Web Vitals, sitemap / robots, content mapping | on-demand only |
 | `wiki-maintainer` | post-feature retro (wiki update step), initial wiki seed during alice bootstrap, on-demand drift lint | `post-feature-retro` rule (retro mode); bootstrap step 6 (seed mode) |
+| `pr-slicer-executor` | never auto-invoked | `/pr-slicer` (one executor per slice; does the code work in its worktree; never pushes) |
 
 **Skill-delegates-to-agent rule.** If a skill has a matching sub-agent, the skill must run the agent as a fresh sub-agent via the `Agent` tool. Inlining the work in the main skill loop pollutes context and blocks parallelism — use the sub-agent.
 
