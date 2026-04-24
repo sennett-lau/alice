@@ -35,7 +35,7 @@ echo "BRANCH: $(git branch --show-current)"
 echo "RUN_TS: $RUN_TS"
 ```
 
-Run state lives at `<repo>/.tmp/diana/<run-slug>/`. Gitignored. Every autonomous decision is logged so the user can audit what diana did without re-running the session.
+Run state lives at `<repo>/.tmp/diana/<run-slug>/`. Gitignored. Every autonomous decision is logged so the user can audit what diana did without re-running the session. The same state dir powers `--resume` after an interrupted run (network drop, token limit, crash) — see the "Resume" and "State & audit trail" sections.
 
 **Load the orchestration rule.** Every sub-agent dispatch in this skill must follow `.alice/rules/sub-agent-orchestration.md` — progress polling (≥1/min) and permission escalation. Diana fans out several sub-agents per run; without polling, a single stuck agent stalls the whole pipeline silently.
 
@@ -46,15 +46,20 @@ Run state lives at `<repo>/.tmp/diana/<run-slug>/`. Gitignored. Every autonomous
 ```
 /diana [<feature-description>] [--mode=fully-auto|murmur] [--effort=low|medium|high|max]
        [--todo <slug> | --from-file <path>]
+       [--resume <slug|latest>] [--resume-from <step-name>]
+       [--list-runs]
 ```
 
 | Param | Values | Default | Notes |
 |-------|--------|---------|-------|
-| description | free-form string | — | One-line or multi-paragraph description of the feature. Required unless `--todo` or `--from-file` provides one. |
-| `--mode` | `fully-auto`, `murmur` | `fully-auto` | See modes below. |
-| `--effort` | `low`, `medium`, `high`, `max` | `medium` | See effort tiers below. |
+| description | free-form string | — | One-line or multi-paragraph description of the feature. Required unless `--todo`, `--from-file`, or `--resume` provides context. |
+| `--mode` | `fully-auto`, `murmur` | `fully-auto` | See modes below. Ignored on resume — mode is re-read from the run's `run.conf`. |
+| `--effort` | `low`, `medium`, `high`, `max` | `medium` | See effort tiers below. Ignored on resume — effort is re-read from the run's `run.conf`. |
 | `--todo` | TODO slug | — | Reads description from `docs/todos/<slug>.md`. Skill will update that same file's status as it progresses. |
 | `--from-file` | path to a markdown file | — | Reads description from file. Useful when the user has a draft spec sitting elsewhere. |
+| `--resume` | run slug (or `latest`) | — | Resume an interrupted run. See "Resume" section. Must also supply `--resume-from` if the last step's status is ambiguous. |
+| `--resume-from` | step name (`plan`, `plan-eng-review`, `implement`, `code-review`, `pr-slicer`, `security-audit`, `retro`, `doc-update`) | — | Force-pick the step to restart from regardless of state markers. Useful when an interrupted step left partial state diana can't safely auto-detect. |
+| `--list-runs` | — | — | Print all runs under `.tmp/diana/` with their status and last-updated timestamp, then stop. Use this before `--resume` to pick the right slug. |
 
 Convenience short-flags the skill also accepts:
 - `--murmur` → `--mode=murmur`
@@ -68,9 +73,15 @@ Convenience short-flags the skill also accepts:
 /diana --high "redesign auth flow to use OIDC"                      # fully-auto, high — adds security audit + outside plan voice
 /diana --max --todo pricing-revamp                                  # max — adds pr-slicer if diff grows big
 /diana --from-file drafts/feature-billing.md                        # read description from a file
+
+# Resume a run that got killed mid-implement (network drop, token limit, crash)
+/diana --list-runs                                                  # see what runs exist
+/diana --resume diana-add-dark-mode-20260424T120000Z                # pick up where it left off
+/diana --resume latest                                              # pick up the most recent run
+/diana --resume latest --resume-from code-review                    # force-restart from a specific step
 ```
 
-If `$ARGUMENTS` is empty: print the usage block and stop.
+If `$ARGUMENTS` is empty AND no runs exist under `.tmp/diana/`: print the usage block and stop.
 
 ---
 
@@ -132,17 +143,145 @@ Otherwise skip slicing — the PR is small enough to review whole. Record the de
 
 ---
 
+## Resume
+
+Runs can die mid-pipeline — network drop, token-limit truncation, crash, user interrupt. The `.tmp/diana/<run-slug>/` dir is the resume source of truth.
+
+### `--list-runs`
+
+```bash
+for d in "$ROOT/.tmp/diana"/*/; do
+  [ -d "$d" ] || continue
+  slug=$(basename "$d")
+  conf="$d/run.conf"
+  if [ -f "$conf" ]; then
+    mode=$(grep '^mode=' "$conf" | cut -d= -f2)
+    effort=$(grep '^effort=' "$conf" | cut -d= -f2)
+  fi
+  # Find last step marker (sorted by numeric prefix)
+  last=$(ls -1 "$d/steps"/*.in-progress "$d/steps"/*.done "$d/steps"/*.failed "$d/steps"/*.skipped 2>/dev/null | sort | tail -1)
+  last_name=$(basename "${last:-none}")
+  updated=$(stat -f "%Sm" -t "%Y-%m-%dT%H:%M:%SZ" "${last:-$conf}" 2>/dev/null || echo "-")
+  printf "%-55s  mode=%s effort=%s  last=%s  updated=%s\n" "$slug" "${mode:--}" "${effort:--}" "$last_name" "$updated"
+done
+```
+
+Sort output by updated-desc. Stop after printing; no other action.
+
+### `--resume <slug|latest>`
+
+1. Resolve slug. If `latest`, pick the most recently updated run dir.
+2. Abort if the run dir is missing or `run.conf` is missing.
+3. Load `run.conf` — re-populate `MODE`, `EFFORT`, `FEATURE`, `BRANCH_AT_START`, `BASE_BRANCH`, `PLAN_FOLDER`, `RUN_SLUG`, `RUN_DIR`. These override any `--mode` / `--effort` / description passed on the command line (a warning is printed if they conflict — the file wins).
+4. Verify adopter's current branch matches `BRANCH_AT_START`. If not, `AskUserQuestion`: `A) Check out $BRANCH_AT_START and continue  B) Continue on current branch (risky — commits may land wrong)  C) Abort resume`. Default: A.
+5. Determine the starting step:
+   - If `--resume-from <step>` is supplied, start there — ignore any markers beyond it and remove them (treat intermediate as stale).
+   - Else, walk the ordered step list and find the first step that is NOT `.done` and NOT `.skipped`.
+     - If that step is `.failed` → `AskUserQuestion`: `A) Retry this step  B) Skip (mark .skipped and move on — risky)  C) Abort`.
+     - If that step is `.in-progress` → treat as interrupted. `AskUserQuestion`: `A) Restart this step from scratch (drop any in-step partial state)  B) Attempt to continue from where it left off (see per-step continue semantics below)  C) Abort`.
+     - If that step has no marker at all → start it fresh.
+6. Proceed with the pipeline from the chosen step. Skip all earlier steps; their `.done` markers remain untouched.
+
+### Per-step continue semantics (when user picks "attempt to continue")
+
+| Step | Continue logic |
+|------|----------------|
+| `murmur` | Re-load answers from `decisions.md#murmur-clarifications`. If missing, restart this step. |
+| `plan` | If `$PLAN_FOLDER/spec.md` exists and has `Status: draft` or `Status: locked`, treat as done-and-just-missing-marker → upgrade marker to `.done` and move on. If `spec.md` is partial (no Acceptance Criteria section), restart step 1. |
+| `plan-eng-review` | If `spec.md` has `Status: locked` and `transcripts/02-plan-review.md` exists, treat as done. Else restart. |
+| `implement` | Read `$PLAN_FOLDER/implementation.md` — its checklist shows which verify-map steps are done. Continue from the first unchecked item. Also cross-check `git log origin/$BASE..HEAD` for commits that match verify-map progress. If the two disagree (uncommitted changes from a prior partial step), show the user `git status` and ask whether to amend/revert before continuing. |
+| `code-review` | Always restart — `/review` is idempotent and a partial run leaves no reliable checkpoint. |
+| `pr-slicer` | If `$RUN_DIR/transcripts/05-pr-slicer.md` lists existing slice branches, check them with `git branch --list 'slice/*'` and skip slices already built + pushed. For in-flight slices, restart that slice. |
+| `security-audit` | Always restart — audit is idempotent and cheap to re-run on the final diff. |
+| `retro` | Step has 5 sub-actions (archive / wiki / experiences / decisions / todo). If `$RUN_DIR/transcripts/07-retro.md` exists, diff its "completed actions" list against the 5; continue with the unfinished ones. |
+| `doc-update` | Always restart — idempotent. |
+
+If any step's continue logic detects a state diana cannot safely reconcile (e.g. uncommitted changes that don't match `implementation.md`), fall back to `AskUserQuestion` with the three A/B/C restart/continue/abort options.
+
+### `--resume-from <step>`
+
+Forces the starting step. Diana does NOT validate whether earlier steps are complete — assumes the user knows what they're doing. All markers for the specified step and later are deleted before the step runs. Earlier markers stay.
+
+Useful when:
+- An interrupted step left partial state diana can't auto-resolve
+- The user manually finished a step outside diana and wants to skip past it
+- A completed step needs to be re-done (e.g. spec changed, want to re-review)
+
+---
+
 ## The pipeline
 
-All steps run under a common run slug:
+All steps run under a common run slug. For a new run:
 
-```
+```bash
 RUN_SLUG="diana-$(echo "$FEATURE" | head -c 40 | tr -cs 'a-zA-Z0-9' '-' | tr '[:upper:]' '[:lower:]' | sed 's/^-//;s/-$//')-$RUN_TS"
 RUN_DIR="$ROOT/.tmp/diana/$RUN_SLUG"
-mkdir -p "$RUN_DIR/transcripts"
+mkdir -p "$RUN_DIR/transcripts" "$RUN_DIR/steps"
 ```
 
-Write `$RUN_DIR/manifest.md` at the start. Update it after each step with status (pending / in-progress / done / failed / skipped). Append decisions to `$RUN_DIR/decisions.md` as they're made.
+For a resumed run, `RUN_SLUG` and `RUN_DIR` come from the resume resolution above.
+
+### Step bookkeeping contract
+
+Each step writes a marker file under `$RUN_DIR/steps/` that is the single source of truth for its status. Four states: `.in-progress`, `.done`, `.failed`, `.skipped`. Exactly one marker per step at any time.
+
+On entering a step:
+
+```bash
+STEP_PREFIX="NN-<step-name>"   # e.g. "01-plan", "03-implement"
+# Clear any previous marker for this step (resume may have left a .failed / .in-progress behind)
+rm -f "$RUN_DIR/steps/$STEP_PREFIX".{in-progress,done,failed,skipped}
+# Write in-progress with the entry timestamp
+date -u +%Y-%m-%dT%H:%M:%SZ > "$RUN_DIR/steps/$STEP_PREFIX.in-progress"
+```
+
+On exiting a step, atomically replace the marker:
+
+```bash
+# Success
+mv "$RUN_DIR/steps/$STEP_PREFIX.in-progress" "$RUN_DIR/steps/$STEP_PREFIX.done"
+
+# Failure — append reason
+{ cat "$RUN_DIR/steps/$STEP_PREFIX.in-progress"; echo "FAILED: <reason>"; } > "$RUN_DIR/steps/$STEP_PREFIX.failed"
+rm "$RUN_DIR/steps/$STEP_PREFIX.in-progress"
+
+# Skipped (e.g. effort tier excludes this step)
+echo "SKIPPED: <reason>" > "$RUN_DIR/steps/$STEP_PREFIX.skipped"
+rm -f "$RUN_DIR/steps/$STEP_PREFIX.in-progress"
+```
+
+The step ordering (used by resume to find the first non-done step):
+
+```
+00-murmur
+01-plan
+02-plan-eng-review
+03-implement
+04-code-review
+05-pr-slicer
+06-security-audit
+07-retro
+08-doc-update
+```
+
+### Run config (written once at run start)
+
+```bash
+cat > "$RUN_DIR/run.conf" <<EOF
+run_slug=$RUN_SLUG
+run_ts=$RUN_TS
+mode=$MODE
+effort=$EFFORT
+feature=$(echo "$FEATURE" | tr '\n' ' ' | head -c 500)
+branch_at_start=$(git branch --show-current)
+base_branch=$BASE_BRANCH
+plan_folder=  # filled in after Step 1
+EOF
+```
+
+After Step 1 creates the plan folder, update `plan_folder=` in-place. Config is immutable otherwise — resume reads it verbatim.
+
+Also write `$RUN_DIR/manifest.md` at the start (human-readable summary pointing at `run.conf` + step markers). Append to `$RUN_DIR/decisions.md` as autonomous decisions get made.
 
 ### Step 0 — Clarification gate (murmur mode only)
 
@@ -206,7 +345,7 @@ During implementation, honor the adopter's critical gotchas (from CLAUDE.md), th
 
 If a verify check fails: diana fixes, re-runs, up to 3 attempts per step. After 3 failures, escalate per Failure Handling.
 
-Commit in small chunks matching the repo's commit-message style (check `git log --oneline -20` on the base branch). Use `implementation.md` in the plan folder to track progress per the template.
+Commit in small chunks matching the repo's commit-message style (check `git log --oneline -20` on the base branch). **Update `implementation.md` in the plan folder as each verify-map step completes** — check the box, note the commit SHA, list the verify result. This file is the checkpoint resume uses when this step gets interrupted; an out-of-date implementation.md means resume can't tell what's actually done. Update it BEFORE committing the code for the step, or as part of the same commit — never after.
 
 **Do NOT** push, create PRs, or deploy at this stage. Remote side-effects happen after all pipeline steps pass and only if the user previously authorized (check adopter's CLAUDE.md for autonomous-push permission; default is NO — diana commits locally, leaves the branch staged, and surfaces in Step 8).
 
@@ -349,9 +488,10 @@ Escalation triggers — pause and `AskUserQuestion`:
 6. Any irreversible-category decision (per Decision Policy principle 6).
 
 On escalation:
+- Write the current step's marker as `.failed` with reason (see "Step bookkeeping contract").
 - Write a full escalation note to `$RUN_DIR/BLOCKED.md` with context + decisions made so far + the specific blocker.
-- Surface via `AskUserQuestion` with options: `A) <path-to-unblock>`, `B) <alternative>`, `C) Abort run (state preserved, manual resume possible)`.
-- Wait for user input. On abort, the plan folder stays `locked`, the branch stays on current commit, and the user can pick up manually.
+- Surface via `AskUserQuestion` with options: `A) <path-to-unblock>`, `B) <alternative>`, `C) Abort run (state preserved — resume with /diana --resume <slug>)`.
+- Wait for user input. On abort, the plan folder stays `locked`, the branch stays on current commit, `run.conf` + step markers remain intact. The user can later pick up manually OR re-invoke diana with `--resume <slug>`.
 
 ---
 
@@ -360,11 +500,22 @@ On escalation:
 `.tmp/diana/<run-slug>/` layout after a complete run:
 
 ```
-manifest.md              — run metadata + per-step status
+run.conf                 — immutable run config (mode/effort/feature/branches/plan_folder)
+manifest.md              — human-readable run summary
 decisions.md             — every autonomous decision + rationale
 followups.md             — deferred review findings (feeds into post-run follow-up)
 BLOCKED.md               — only if diana escalated mid-run
-transcripts/
+steps/                   — step markers — source of truth for resume
+  00-murmur.{skipped|done}
+  01-plan.done
+  02-plan-eng-review.{done|skipped}
+  03-implement.done
+  04-code-review.{done|skipped}
+  05-pr-slicer.{done|skipped}
+  06-security-audit.{done|skipped}
+  07-retro.done
+  08-doc-update.done
+transcripts/             — narrative output per step
   00-murmur.md           — murmur clarification Q&A (if ran)
   01-plan.md             — full /plan output (spec draft)
   02-plan-review.md      — /plan-eng-review + outside voice handbacks
@@ -378,6 +529,35 @@ transcripts/
 
 Everything under `.tmp/` is gitignored. The audit trail stays with the local checkout; deleting the checkout deletes the trail.
 
+**During a run:**
+- `steps/<step>.in-progress` is present while the step is executing — this is the "interrupted" signal resume watches for.
+- `steps/<step>.failed` is written (replacing `.in-progress`) if the step hits the retry limit or an unfixable escalation.
+- `run.conf` is written once at the start (except `plan_folder=` which is backfilled after Step 1). Resume reads it to re-populate `MODE`, `EFFORT`, `FEATURE`, and the branches.
+
+**Manifest format** — `manifest.md` is a human-readable summary pointing at everything else. It has no load-bearing role in resume (the `steps/` markers do). Diana updates it after each step for the user's convenience:
+
+```markdown
+# diana run: <run-slug>
+
+- Mode: fully-auto
+- Effort: medium
+- Feature: add dark mode toggle to app shell
+- Branch: feat/dark-mode (base: main)
+- Plan folder: docs/plans/active/2026-04-24_dark-mode
+- Started: 2026-04-24T12:00:00Z
+
+## Step status
+- [x] 0. murmur (skipped — fully-auto)
+- [x] 1. plan — done 12:02:00Z
+- [x] 2. plan-eng-review — done 12:08:15Z (2 findings fixed, spec locked)
+- [~] 3. implement — in-progress since 12:08:20Z
+- [ ] 4. code-review
+- [ ] 5. pr-slicer
+- [ ] 6. security-audit
+- [ ] 7. retro
+- [ ] 8. doc-update
+```
+
 Diana also writes a terse running status to the user's session as each step completes:
 
 ```
@@ -387,7 +567,14 @@ Diana also writes a terse running status to the user's session as each step comp
 ...
 ```
 
-One line per step — no prose, no filler.
+One line per step — no prose, no filler. On resume, diana prints the resume banner first:
+
+```
+[diana] Resuming run diana-add-dark-mode-20260424T120000Z
+[diana]   Mode: fully-auto  Effort: medium
+[diana]   Last completed step: 02-plan-eng-review (at 12:08:15Z)
+[diana]   Continuing from: 03-implement (was in-progress, user chose "continue from checkpoint")
+```
 
 ---
 
@@ -400,4 +587,6 @@ One line per step — no prose, no filler.
 - **Fully-auto ≠ unsafe.** Escalate on the six escalation triggers. Irreversibles always pause. Build-environment-broken always pauses. Diana is bold inside the known-safe region and cautious at its edges.
 - **Murmur asks ONCE.** Five questions max, at the start, batched. No mid-pipeline clarifications — those would violate the "run the rest silently" contract.
 - **Branch hygiene.** Diana runs on whatever branch is currently checked out; she does not create a new branch unless the adopter's CLAUDE.md documents a branching convention that requires one. If the current branch is a base branch (main/prod), diana stops and asks the user to check out or create a feature branch first.
+- **Step markers are sacred.** Never delete a `.done` marker except when explicitly restarting that step via `--resume-from`. Never write a `.done` marker without actually completing the step's work. Markers are the resume contract — faking them strands future diana runs.
+- **Resume preserves autonomy.** A resumed run uses the same mode/effort as the original (loaded from `run.conf`). If the user wants different mode/effort, they start a new run, not resume.
 - **Retro + doc update are binding.** Skipping them would violate `post-feature-retro.md` and `documentation-updates.md`. Every effort tier runs both.
