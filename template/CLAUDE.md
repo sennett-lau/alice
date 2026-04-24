@@ -140,6 +140,7 @@ The project ships a small, project-local set of skills under `.alice/skills/` (s
 | Pre-implementation architecture review | `plan-eng-review` |
 | Security audit — secrets, dependencies, CI/CD, OWASP, LLM trust | `security-audit` |
 | Multi-source research with citations — web synthesis, competitive / market / tech scan | `research` |
+| Pull the latest alice framework into `.alice/` (sync skills, commands, agents, migrations) | `/sync` (`.alice/commands/sync.md`) |
 
 **Project-local state.** Any skill that needs scratch space writes to `<project-root>/.tmp/` (gitignored, per-checkout). Never `~/.claude/`, never user-home.
 

@@ -63,6 +63,26 @@ Alice's own version lives in `VERSION` at the repo root (single line, semver, no
 
 `VERSION` and `.claude/commands/release.md` are **alice-local** — they do not ship to adopters via the bootstrap recipe. Adopters own their own release/deploy story (see "What NOT to add"). Do not move either into `framework/` or `template/`.
 
+## Writing a migration file
+
+Adopters pull updates via `/sync` (`framework/commands/sync.md`). Most releases need no migration file — `/sync` walks every changed file in `framework/` and classifies it (Tier 1 add / Tier 2 clean update / Tier 3 local conflict). Tier 4 is the exception: structural changes that can't be resolved by a file-copy.
+
+**If your release renames, splits, deletes, or reshapes anything adopters depend on, write `framework/migrations/<version>.md`.** Full format spec in `framework/migrations/README.md`. Examples that require a migration file:
+
+- Renaming a skill dir, a rule, a template, a bin script, or a command
+- Splitting a single file into multiple (e.g. one large skill's SKILL.md becomes SKILL.md + docs/)
+- Deleting a file adopters are likely using (skill, rule, template, command, agent, bin script)
+- Changing the `docs/` layout that `template/docs/` seeded
+- Changing load-bearing sections of `template/CLAUDE.md` (load policy, required sections, rule references)
+- Changing the `.alice/` ↔ `.claude/` symlink convention
+- Changing a bin script's CLI surface (flags/args reordered or removed)
+
+Examples that do **not** need a migration file: adding a new skill/agent/rule/template/command, editing the body of an existing file without renaming it, editing docs/comments, fixing bugs in bin scripts without CLI changes.
+
+If you're unsure, write one — an empty "Manual actions" is cheap, a missing migration that strands adopters is not.
+
+`/sync` is the single source of truth for the upgrade path. Changes to `framework/commands/sync.md` itself count as load-bearing — treat them like public API.
+
 ## Provenance
 
 Distilled from an internal project's agent operating manual on 2026-04-20. The five binding rules, templates, `/plan` command, and skill suite were ported with all project-specific content stripped out. State paths and bin scripts were rebranded to `.alice/` / `alice-*`. If you see ghosts of the original project in commit history (chain-specific rules, stack profiles, gstack wording, root-level `TODOS.md`), re-read why they were removed before bringing anything back.

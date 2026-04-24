@@ -59,6 +59,22 @@ If `<target>/.alice` already exists (file, dir, or symlink), STOP and surface it
 
 Otherwise: copy `<alice>/framework/` → `<target>/.alice/`. This must be a real directory copy, not a symlink — the target needs to stand on its own.
 
+**Stamp `.alice/VERSION`** immediately after the copy. This records where the adopter came from and what alice version they're on, so `/sync` can compute precise diffs later. Write a multi-line yaml-ish file:
+
+```bash
+VERSION=$(cat <alice>/VERSION | tr -d '[:space:]')
+COMMIT=$(git -C <alice> rev-parse --short HEAD)
+UPSTREAM=$(git -C <alice> remote get-url origin 2>/dev/null || echo "unknown")
+cat > <target>/.alice/VERSION <<EOF
+version: $VERSION
+upstream: $UPSTREAM
+commit: $COMMIT
+bootstrapped: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+EOF
+```
+
+If alice's root `VERSION` file is missing, or the upstream URL cannot be determined (dirty local clone, no remote), STOP and surface — the adopter needs a reliable provenance record for future `/sync` runs. Resolve before continuing.
+
 ### 2. Wire `.claude/` shims into `.alice/`
 
 Create `<target>/.claude/skills/` and `<target>/.claude/agents/` if missing.
@@ -136,7 +152,11 @@ Summarize what you did:
 
 ## Updating alice in adopting projects
 
-Re-run the agent quickstart prompt: it'll clone alice into temp, see that `.alice/` already exists, surface the existing version, and propose a diff/merge plan. There's no force-overwrite path — that's deliberate.
+Run `/sync` from the adopter repo. It reads `upstream` from `.alice/VERSION`, clones alice to `.tmp/alice-sync/<ts>/`, classifies every changed file into four tiers (safe add / clean update / local conflict / structural migration), walks the user through each, and stamps the new version. Full details: `.alice/commands/sync.md` (and `framework/commands/sync.md` in this repo).
+
+Adopters bootstrapped before `.alice/VERSION` existed get a fallback prompt in `/sync` asking them to specify their current version or assume pre-versioned. The bootstrap recipe above now stamps `.alice/VERSION` at step 1, so every new adopter starts with a proper provenance record.
+
+`/sync` never force-overwrites, never auto-commits, and never pushes. It leaves the working tree dirty for the user to review and commit.
 
 ## Removing alice
 
