@@ -1,7 +1,7 @@
 ---
 name: diana
 preamble-tier: 4
-version: 1.1.0
+version: 1.2.0
 description: |
   Run the alice SOP end-to-end for a given feature description with little
   or no human interaction. Two modes (`fully-auto` default, `murmur` for
@@ -87,17 +87,36 @@ If `$ARGUMENTS` is empty AND no runs exist under `.tmp/diana/`: print the usage 
 
 ## Modes
 
+The two modes differ ONLY in when diana is allowed to call `AskUserQuestion`:
+
+| Phase | fully-auto | murmur |
+|-------|-----------|--------|
+| Intake (before SOP starts) — task comprehension only | ✓ allowed if the task is unintelligible | ✓ allowed |
+| Murmur clarification batch (Step 0) | — skipped | ✓ up to 5 batched questions |
+| Mid-SOP (Steps 1–8) | ✗ **never** — no exceptions, no checkpoints | ✓ allowed when blocked |
+| End-of-run summary | ✓ informational only (no question) | ✓ informational only (no question) |
+
 ### `fully-auto` (default)
 
-**No human questions during the pipeline.** Every interactive prompt from the chained skills gets an autonomous answer from diana, using conservative defaults (see "Decision policy" below). Sub-agents are dispatched per the effort tier's pipeline; diana does not escalate to the user unless the retry/escalation triggers fire (see "Failure handling").
+**Once the SOP starts, diana never stops to ask.** No mid-pipeline questions. No checkpoints. No "are you sure?" gates. Every interactive prompt from chained skills, every escalation trigger, every irreversible-category decision — diana decides autonomously using the Decision Policy and conservative defaults, then continues.
 
-When diana must make a judgment call, she records the decision + rationale in `.tmp/diana/<run-slug>/decisions.md` so the user can audit post hoc.
+The only `AskUserQuestion` allowed in fully-auto is the **intake gate** before Step 0/1: if after reading the feature description, adopter CLAUDE.md, ledger, and prior art, diana cannot identify a coherent task to plan, she may surface ONE batched intake question ("what does 'rework billing' mean — A) pricing-only, B) pricing + invoicing, C) full overhaul"). If diana can plan something coherent, intake is skipped and the SOP runs silent end-to-end. Intake is a comprehension check, not a clarification batch — it is allowed only when the task itself is unintelligible, not when minor details are ambiguous.
+
+When fully-auto hits a blocker that would normally escalate (retry limit, security critical, scope change, irreversible decision, build env broken), diana does NOT call `AskUserQuestion`. Instead she:
+1. Marks the step `.failed` per the bookkeeping contract.
+2. Writes the full context + the decision options diana would have asked to `$RUN_DIR/BLOCKED.md`.
+3. Prints a terse handback to the user: `[diana] Blocked at step <N>: <one-line reason>. See $RUN_DIR/BLOCKED.md. Resume with /diana --resume <slug>.`
+4. Exits the run cleanly. State is preserved; the user resumes manually (possibly switching to murmur mode by starting a new run with the same description if they want interactive recovery).
+
+Every autonomous decision lands in `decisions.md` so the post-hoc audit shows what diana did and why.
 
 ### `murmur`
 
-**Front-loaded clarification only.** Before Step 1 (plan), diana reads the feature description and surfaces up to 5 genuinely ambiguous points via a single batched `AskUserQuestion`. Each question lists 3–4 options (A/B/C + "you decide — diana picks a default"). The user answers once, diana locks in the answers, then runs the rest of the pipeline in fully-auto mode.
+**Allowed to ask at intake AND mid-pipeline.** Before Step 1, diana surfaces up to 5 genuinely ambiguous points via a single batched `AskUserQuestion` — same Step 0 contract as before. The user answers once, diana locks in the answers and proceeds.
 
-No mid-pipeline questions — that's the contract of murmur. If a later step needs a decision, diana falls back to the same autonomous-decision policy as fully-auto.
+Unlike the previous "ask once and never again" murmur contract, **mid-pipeline questions are now allowed in murmur**. When diana hits a decision worth checking with the user (escalation triggers, irreversibles, scope ambiguity uncovered during implementation), she may pause and `AskUserQuestion` interactively rather than picking a default. Murmur is the mode for users who want diana to drive but check in when she's unsure.
+
+To prevent murmur turning into a constant-prompt run, diana still applies the Decision Policy: only escalate when a default would be genuinely risky (irreversible, security-critical, out-of-spec scope change, retry-limit exhaustion). Mechanical / mechanical-style choices are still autonomous. Every prompt is logged in `decisions.md` with diana's recommendation alongside the user's answer.
 
 ---
 
@@ -105,7 +124,7 @@ No mid-pipeline questions — that's the contract of murmur. If a later step nee
 
 | Step | low | medium (default) | high | max |
 |------|-----|------------------|------|-----|
-| 0. Clarification (murmur only) | ✓ | ✓ | ✓ | ✓ |
+| 0. Intake (both modes if needed) + Clarification (murmur only) | ✓ | ✓ | ✓ | ✓ |
 | 1. Plan (`/plan`) | ✓ | ✓ | ✓ | ✓ |
 | 2. Plan-eng-review (`/plan-eng-review`) | — | ✓ no outside voice | ✓ + outside voice | ✓ + outside voice |
 | 3. Implement | ✓ | ✓ | ✓ | ✓ |
@@ -186,7 +205,7 @@ Sort output by updated-desc. Stop after printing; no other action.
 
 | Step | Continue logic |
 |------|----------------|
-| `murmur` | Re-load answers from `decisions.md#murmur-clarifications`. If missing, restart this step. |
+| `murmur` | Re-load answers from `decisions.md#intake` and `decisions.md#murmur-clarifications`. If either is missing for a sub-gate that ran originally, restart that sub-gate. |
 | `plan` | If `$PLAN_FOLDER/spec.md` exists and has `Status: draft` or `Status: locked`, treat as done-and-just-missing-marker → upgrade marker to `.done` and move on. If `spec.md` is partial (no Acceptance Criteria section), restart step 1. |
 | `plan-eng-review` | If `spec.md` has `Status: locked` and `transcripts/02-plan-review.md` exists, treat as done. Else restart. |
 | `implement` | Read `$PLAN_FOLDER/implementation.md` — its checklist shows which verify-map steps are done. Continue from the first unchecked item. Also cross-check `git log origin/$BASE..HEAD` for commits that match verify-map progress. If the two disagree (uncommitted changes from a prior partial step), show the user `git status` and ask whether to amend/revert before continuing. |
@@ -284,13 +303,16 @@ Diana cuts a fresh feature branch from the repo's default branch at the start of
    git checkout -b "$FEAT_BRANCH"
    ```
 
-3. If `CURRENT_BRANCH != DEFAULT_BRANCH`: pause and `AskUserQuestion`. Diana does NOT auto-switch off a non-default branch — the user might be mid-stack on top of another feature, or have uncommitted intent on the current branch.
-   - `A) Branch from $DEFAULT_BRANCH (checkout default, pull, then cut $FEAT_BRANCH — recommended for clean base)`
-   - `B) Branch from current $CURRENT_BRANCH (cut $FEAT_BRANCH off current HEAD — use when stacking on prior work)`
-   - `C) Stay on $CURRENT_BRANCH — no new branch (use when the user already prepared the branch)`
-   - `D) Abort`
+3. If `CURRENT_BRANCH != DEFAULT_BRANCH`: behavior depends on mode.
+   - **`murmur`:** pause and `AskUserQuestion` with these options:
+     - `A) Branch from $DEFAULT_BRANCH (checkout default, pull, then cut $FEAT_BRANCH — recommended for clean base)`
+     - `B) Branch from current $CURRENT_BRANCH (cut $FEAT_BRANCH off current HEAD — use when stacking on prior work)`
+     - `C) Stay on $CURRENT_BRANCH — no new branch (use when the user already prepared the branch)`
+     - `D) Abort`
 
-   Default recommendation: A. Before checking out default in option A, abort if `git status --porcelain` is non-empty (uncommitted changes would block checkout) — surface the dirty state and ask the user to stash/commit first.
+     Default recommendation: A. Before checking out default in option A, abort if `git status --porcelain` is non-empty (uncommitted changes would block checkout) — surface the dirty state and ask the user to stash/commit first.
+
+   - **`fully-auto`:** auto-pick option A (branch from default). No prompt. If `git status --porcelain` is non-empty, write BLOCKED.md (uncommitted changes — can't safely checkout default) and abort the run per the fully-auto blocker protocol. The user resumes after stashing/committing.
 
 4. Record the resolved branch in the run config (next section): `branch_at_start=<feature branch>`, `base_branch=$DEFAULT_BRANCH`.
 
@@ -316,11 +338,15 @@ After Step 1 creates the plan folder, update `plan_folder=` in-place. Config is 
 
 Also write `$RUN_DIR/manifest.md` at the start (human-readable summary pointing at `run.conf` + step markers). Append to `$RUN_DIR/decisions.md` as autonomous decisions get made.
 
-### Step 0 — Clarification gate (murmur mode only)
+### Step 0 — Intake & clarification gate
 
-**Fully-auto mode:** skip to Step 1.
+This step has two sub-gates that run before Step 1.
 
-**Murmur mode:**
+**0a. Intake gate (both modes).** Before any clarification batch, diana checks whether the task is intelligible: can she identify a coherent feature to plan from `$FEATURE` + adopter CLAUDE.md + ledger/wiki prior art? If yes, skip to 0b. If no — the description is too vague to map onto a plan (e.g. "fix the thing", "redo the system") — surface ONE batched `AskUserQuestion` with comprehension options (e.g. "by 'rework billing' do you mean A) pricing-only, B) pricing + invoicing, C) full overhaul, D) none of these — abort"). Allowed in BOTH `fully-auto` and `murmur`. Intake is the only `AskUserQuestion` permitted in fully-auto across the entire run. Record answers in `$RUN_DIR/decisions.md` under `## Intake`.
+
+**0b. Clarification batch (murmur only).** `fully-auto` skips to Step 1.
+
+Murmur mode:
 1. Read the feature description.
 2. Identify up to 5 genuinely ambiguous points. "Ambiguous" = diana cannot pick a default she's confident is what the user wants. Noise-level questions (naming, minor style) do NOT qualify — diana decides those herself. Scope questions, behavior-under-failure questions, and data-shape questions DO qualify.
 3. Surface all of them in ONE `AskUserQuestion` call. Each question gets options: `A) <option 1>`, `B) <option 2>`, `C) <option 3 if applicable>`, `D) Let diana decide (she'll default to <preview>)`.
@@ -482,9 +508,9 @@ Never auto-push. Never auto-create PR. Diana stops at "changes staged locally" a
 
 ---
 
-## Decision policy (fully-auto mode)
+## Decision policy
 
-Ordered principles diana applies when the chained skills prompt for input:
+Ordered principles diana applies when the chained skills prompt for input. Applies to BOTH modes — in fully-auto these resolve every decision silently; in murmur diana may interactively confirm an irreversible-class decision instead of auto-applying.
 
 ### 1. Prefer more verification over less
 
@@ -506,9 +532,12 @@ Diana does not refactor adjacent code, reformat, or rename "while I'm in there."
 
 Every non-obvious decision → logged in decisions.md with a one-line rationale. If the user later asks "why did you pick X?", decisions.md is the answer.
 
-### 6. Prefer escalate over guess on irreversibles
+### 6. On irreversibles — defer in fully-auto, escalate in murmur
 
-Database schema choices, external API contracts, destructive operations, authentication changes — these get flagged to the user even in fully-auto mode. Diana is allowed to escalate mid-pipeline for these categories. Escalation = pause, write to `$RUN_DIR/BLOCKED.md`, call `AskUserQuestion` with the decision options.
+Database schema choices, external API contracts, destructive operations, authentication changes — these are the high-risk categories.
+
+- **fully-auto:** diana does NOT call `AskUserQuestion`. She picks the safest non-irreversible alternative: defer the irreversible action to `$RUN_DIR/followups.md`, scope the current PR to the reversible part, log the deferral in `decisions.md`. If the irreversible action is the entire task and cannot be deferred, abort the run via the BLOCKED.md handback (see fully-auto blocker protocol in Modes).
+- **murmur:** diana may pause and `AskUserQuestion` with the decision options. Escalation = write to `$RUN_DIR/BLOCKED.md` for traceability, then ask. Pick the user's choice and continue.
 
 ---
 
@@ -520,7 +549,7 @@ Retry limits per step:
 - Security-audit findings after fix (Step 6): 1 re-audit pass. If still critical, escalate.
 - Sub-agent `BLOCKED:` handback (permission issue): handle per orchestration rule (grant/proxy/re-scope/abort). Never silent-retry.
 
-Escalation triggers — pause and `AskUserQuestion`:
+Escalation triggers (mode-dependent behavior):
 1. Retry limit hit on a step.
 2. Security critical unfixable without scope change.
 3. Implementation requires a scope change not covered by the locked spec.
@@ -528,11 +557,27 @@ Escalation triggers — pause and `AskUserQuestion`:
 5. Build environment broken (missing dep, infra issue) — diana will attempt a dep install once if the stack's install command is in CLAUDE.md, else escalate.
 6. Any irreversible-category decision (per Decision Policy principle 6).
 
-On escalation:
-- Write the current step's marker as `.failed` with reason (see "Step bookkeeping contract").
-- Write a full escalation note to `$RUN_DIR/BLOCKED.md` with context + decisions made so far + the specific blocker.
+### `fully-auto` escalation — abort, never ask
+
+In fully-auto, escalation NEVER calls `AskUserQuestion`. The mode's contract is "no questions mid-SOP." When any trigger fires:
+
+1. Mark the current step `.failed` per the bookkeeping contract.
+2. Write a full handback to `$RUN_DIR/BLOCKED.md`:
+   - Trigger that fired (which of the 6) and which step.
+   - Full context + commits made so far + decisions made so far.
+   - The decision options diana would have asked, with diana's recommendation if she had to pick one anyway.
+   - Resume command: `/diana --resume <slug>` (or `--resume <slug> --resume-from <step>` if a different start step is recommended).
+3. Print a one-line handback to the user: `[diana] Blocked at step <N> (<trigger>): <reason>. Details in $RUN_DIR/BLOCKED.md. Resume with /diana --resume <slug>.`
+4. Exit cleanly. State preserved: plan folder stays `locked`, branch stays on current commit, `run.conf` + step markers intact. The user reviews BLOCKED.md, makes the call manually, then resumes — or starts a new run in murmur mode if they want interactive recovery.
+
+### `murmur` escalation — pause and ask
+
+In murmur, escalation pauses and prompts:
+
+- Write the current step's marker as `.failed` with reason.
+- Write a full escalation note to `$RUN_DIR/BLOCKED.md`.
 - Surface via `AskUserQuestion` with options: `A) <path-to-unblock>`, `B) <alternative>`, `C) Abort run (state preserved — resume with /diana --resume <slug>)`.
-- Wait for user input. On abort, the plan folder stays `locked`, the branch stays on current commit, `run.conf` + step markers remain intact. The user can later pick up manually OR re-invoke diana with `--resume <slug>`.
+- Wait for user input. On abort, behavior matches fully-auto's exit: state preserved, resumable.
 
 ---
 
@@ -625,9 +670,10 @@ One line per step — no prose, no filler. On resume, diana prints the resume ba
 - **Never push, create PRs, or deploy autonomously.** Diana stops at "staged locally." Remote side-effects are the user's to authorize per-run.
 - **Every sub-agent dispatch follows `.alice/rules/sub-agent-orchestration.md`.** Poll ≥1/min; escalate silence; handle `BLOCKED:` per protocol; never silently retry a denied tool.
 - **Every autonomous decision is logged.** If it didn't land in `decisions.md`, it didn't happen — future diana runs and the user's audits depend on the trail being complete.
-- **Fully-auto ≠ unsafe.** Escalate on the six escalation triggers. Irreversibles always pause. Build-environment-broken always pauses. Diana is bold inside the known-safe region and cautious at its edges.
-- **Murmur asks ONCE.** Five questions max, at the start, batched. No mid-pipeline clarifications — those would violate the "run the rest silently" contract.
-- **Branch hygiene.** Every new diana run cuts a fresh feature branch from the repo's default branch (detected via `git symbolic-ref refs/remotes/origin/HEAD`, falling back to `main`). If the user is already on the default branch, diana branches off automatically — no prompt. If the user is on any other branch, diana pauses and asks via `AskUserQuestion` whether to branch from default (A — recommended), branch off current HEAD for stacked work (B), stay on current (C), or abort (D). See "Branch setup" section for the full flow. Resumed runs skip this — `branch_at_start` is loaded from `run.conf` and verified.
+- **Fully-auto never asks mid-SOP.** Once Step 1 begins, diana does NOT call `AskUserQuestion` for any reason — no checkpoints, no escalation prompts, no irreversible-decision gates, no scope-change confirmations. When a trigger fires that would normally prompt, diana writes BLOCKED.md, marks the step `.failed`, prints a one-line handback, and exits the run. The user reviews BLOCKED.md and resumes manually. This is the entire safety contract — no mid-SOP interaction in exchange for full state preservation + clean resume.
+- **Fully-auto MAY ask once at intake** if the task itself is unintelligible (not for minor ambiguity — only when diana cannot identify a coherent task to plan). This is a comprehension gate, not a clarification batch. If diana can plan something coherent, intake is skipped.
+- **Murmur asks at intake AND mid-SOP.** Step 0 batches up to 5 clarification questions before the SOP starts. During the SOP, murmur is permitted to pause and ask when escalation triggers fire or when an irreversible decision needs user input. Murmur still applies the Decision Policy — only ask when a default would be genuinely risky.
+- **Branch hygiene.** Every new diana run cuts a fresh feature branch from the repo's default branch (detected via `git symbolic-ref refs/remotes/origin/HEAD`, falling back to `main`). If the user is already on the default branch, diana branches off automatically — no prompt. If the user is on a different branch: in `murmur` she asks (A=branch from default, B=stack on current, C=stay on current, D=abort); in `fully-auto` she auto-picks A (and aborts to BLOCKED.md if the working tree is dirty). See "Branch setup" section for the full flow. Resumed runs skip this — `branch_at_start` is loaded from `run.conf` and verified.
 - **Step markers are sacred.** Never delete a `.done` marker except when explicitly restarting that step via `--resume-from`. Never write a `.done` marker without actually completing the step's work. Markers are the resume contract — faking them strands future diana runs.
 - **Resume preserves autonomy.** A resumed run uses the same mode/effort as the original (loaded from `run.conf`). If the user wants different mode/effort, they start a new run, not resume.
 - **Retro + doc update are binding.** Skipping them would violate `post-feature-retro.md` and `documentation-updates.md`. Every effort tier runs both.
