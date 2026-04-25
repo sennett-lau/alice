@@ -1,7 +1,7 @@
 ---
 name: diana
 preamble-tier: 4
-version: 1.0.0
+version: 1.1.0
 description: |
   Run the alice SOP end-to-end for a given feature description with little
   or no human interaction. Two modes (`fully-auto` default, `murmur` for
@@ -264,6 +264,38 @@ The step ordering (used by resume to find the first non-done step):
 08-doc-update
 ```
 
+### Branch setup (new runs only — runs before run.conf is written)
+
+Diana cuts a fresh feature branch from the repo's default branch at the start of every new run. Resume skips this step (branch already resolved in `run.conf`).
+
+1. Detect default branch + current branch:
+   ```bash
+   DEFAULT_BRANCH=$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+   DEFAULT_BRANCH="${DEFAULT_BRANCH:-$(git config --get init.defaultBranch || echo main)}"
+   CURRENT_BRANCH=$(git branch --show-current)
+   FEAT_SLUG=$(echo "$FEATURE" | head -c 40 | tr -cs 'a-zA-Z0-9' '-' | tr '[:upper:]' '[:lower:]' | sed 's/^-//;s/-$//')
+   FEAT_BRANCH="feat/$FEAT_SLUG"
+   ```
+   If the adopter's CLAUDE.md documents a branch-naming convention, use it instead of `feat/<slug>`.
+
+2. If `CURRENT_BRANCH == DEFAULT_BRANCH`: pull latest, then create the feature branch — no user prompt.
+   ```bash
+   git pull --ff-only origin "$DEFAULT_BRANCH"
+   git checkout -b "$FEAT_BRANCH"
+   ```
+
+3. If `CURRENT_BRANCH != DEFAULT_BRANCH`: pause and `AskUserQuestion`. Diana does NOT auto-switch off a non-default branch — the user might be mid-stack on top of another feature, or have uncommitted intent on the current branch.
+   - `A) Branch from $DEFAULT_BRANCH (checkout default, pull, then cut $FEAT_BRANCH — recommended for clean base)`
+   - `B) Branch from current $CURRENT_BRANCH (cut $FEAT_BRANCH off current HEAD — use when stacking on prior work)`
+   - `C) Stay on $CURRENT_BRANCH — no new branch (use when the user already prepared the branch)`
+   - `D) Abort`
+
+   Default recommendation: A. Before checking out default in option A, abort if `git status --porcelain` is non-empty (uncommitted changes would block checkout) — surface the dirty state and ask the user to stash/commit first.
+
+4. Record the resolved branch in the run config (next section): `branch_at_start=<feature branch>`, `base_branch=$DEFAULT_BRANCH`.
+
+Log the choice + reason to `decisions.md` under `## Branch setup`.
+
 ### Run config (written once at run start)
 
 ```bash
@@ -274,7 +306,7 @@ mode=$MODE
 effort=$EFFORT
 feature=$(echo "$FEATURE" | tr '\n' ' ' | head -c 500)
 branch_at_start=$(git branch --show-current)
-base_branch=$BASE_BRANCH
+base_branch=$DEFAULT_BRANCH
 plan_folder=  # filled in after Step 1
 EOF
 ```
@@ -586,7 +618,7 @@ One line per step — no prose, no filler. On resume, diana prints the resume ba
 - **Every autonomous decision is logged.** If it didn't land in `decisions.md`, it didn't happen — future diana runs and the user's audits depend on the trail being complete.
 - **Fully-auto ≠ unsafe.** Escalate on the six escalation triggers. Irreversibles always pause. Build-environment-broken always pauses. Diana is bold inside the known-safe region and cautious at its edges.
 - **Murmur asks ONCE.** Five questions max, at the start, batched. No mid-pipeline clarifications — those would violate the "run the rest silently" contract.
-- **Branch hygiene.** Diana runs on whatever branch is currently checked out; she does not create a new branch unless the adopter's CLAUDE.md documents a branching convention that requires one. If the current branch is a base branch (main/prod), diana stops and asks the user to check out or create a feature branch first.
+- **Branch hygiene.** Every new diana run cuts a fresh feature branch from the repo's default branch (detected via `git symbolic-ref refs/remotes/origin/HEAD`, falling back to `main`). If the user is already on the default branch, diana branches off automatically — no prompt. If the user is on any other branch, diana pauses and asks via `AskUserQuestion` whether to branch from default (A — recommended), branch off current HEAD for stacked work (B), stay on current (C), or abort (D). See "Branch setup" section for the full flow. Resumed runs skip this — `branch_at_start` is loaded from `run.conf` and verified.
 - **Step markers are sacred.** Never delete a `.done` marker except when explicitly restarting that step via `--resume-from`. Never write a `.done` marker without actually completing the step's work. Markers are the resume contract — faking them strands future diana runs.
 - **Resume preserves autonomy.** A resumed run uses the same mode/effort as the original (loaded from `run.conf`). If the user wants different mode/effort, they start a new run, not resume.
 - **Retro + doc update are binding.** Skipping them would violate `post-feature-retro.md` and `documentation-updates.md`. Every effort tier runs both.
