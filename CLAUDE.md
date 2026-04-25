@@ -16,11 +16,12 @@ alice/
   README.md                public-facing tour + agent quickstart
   bootstrap/README.md      step-by-step adoption recipe
   framework/               ships to adopter's .alice/
-    rules/                 5 binding rules (ship to adopter at .alice/rules/)
+    rules/                 6 binding rules (ship to adopter at .alice/rules/)
     templates/             overview / spec / decision / implementation / todo
-    commands/plan.md       /plan interactive spec builder
+    commands/              /plan + /sync commands (ship to adopter at .alice/commands/)
     skills/<name>/         skill sources — ship to adopter at .alice/skills/<name>/
     agents/<name>.md       sub-agent sources — ship to adopter at .alice/agents/<name>.md
+    migrations/<ver>.md    per-version structural migration notes (read by /sync)
     bin/                   alice-slug / alice-diff-scope / alice-review-{log,read} / chrome-cdp
   template/                ships to adopter's repo root
     CLAUDE.md              template that becomes the adopter's CLAUDE.md
@@ -40,7 +41,7 @@ Almost every file here ships **verbatim** into adopting repos via the bootstrap 
 
 1. **Stay generic.** If a rule, template, or skill starts naming a framework (Next.js, Rails, Fastify), a stack (Cloudflare, AWS), or a domain (blockchain, payments, auth-provider), push it back into the adopter's `CLAUDE.md` or `docs/wiki/`. Alice is the universal floor.
 2. **No brand coupling.** No gstack, no cmux-as-requirement, no ns-mm, no tool-chain lock-in beyond what's intrinsic to the skill (e.g. browse uses bun because `bun build --compile` is load-bearing — that's intrinsic, not brand coupling).
-3. **Template changes cascade.** Edits to `template/**`, `framework/rules/**`, `framework/templates/**`, or `framework/commands/plan.md` affect every future adopter. Treat them like public API.
+3. **Template changes cascade.** Edits to `template/**`, `framework/rules/**`, `framework/templates/**`, or `framework/commands/*.md` affect every future adopter. Treat them like public API.
 4. **Skills and agents are Claude-Code-shaped.** Skill frontmatter (`allowed-tools`, `description`, hook semantics) and agent frontmatter (`tools`, `description`) assume Claude Code as the runtime. Rules, templates, commands, and docs are agent-agnostic — any agent that can read markdown can use them via `.alice/rules/`, `.alice/templates/`, etc. This is why the bootstrap produces `.alice/` at the repo root (shared) plus a `.claude/` shim (Claude-specific). Preserve the split.
 5. **Lazy install over eager install.** The `browse` binary builds on first `/browse` invocation via `framework/skills/browse/setup`. Don't add mandatory pre-build steps to the bootstrap recipe — the skills already self-heal.
 6. **Non-destructive bootstrap.** `bootstrap/README.md` tells the driving agent to never overwrite existing `CLAUDE.md`, `docs/`, or `.alice/` in the target repo — surface conflicts and propose migrations instead. If you add new bootstrap steps, preserve that invariant.
@@ -56,6 +57,32 @@ Things that were considered and deliberately dropped:
 - **A `setup.sh` installer.** The quickstart prompt in `README.md` asks the driving agent to read `bootstrap/README.md` and execute the steps directly. A script would duplicate work and add a maintenance surface.
 
 If a new proposal smells like one of these, push back. If it's genuinely a universal addition, argue the case.
+
+## Releasing alice
+
+Alice's own version lives in `VERSION` at the repo root (single line, semver, no leading `v`). The `/release` command at `.claude/commands/release.md` runs the full flow: sync `development`, bump `VERSION` with a commit, merge to `main`, tag with a description built from the commit log since the last tag, push both refs.
+
+`VERSION` and `.claude/commands/release.md` are **alice-local** — they do not ship to adopters via the bootstrap recipe. Adopters own their own release/deploy story (see "What NOT to add"). Do not move either into `framework/` or `template/`.
+
+## Writing a migration file
+
+Adopters pull updates via `/sync` (`framework/commands/sync.md`). Most releases need no migration file — `/sync` walks every changed file in `framework/` and classifies it (Tier 1 add / Tier 2 clean update / Tier 3 local conflict). Tier 4 is the exception: structural changes that can't be resolved by a file-copy.
+
+**If your release renames, splits, deletes, or reshapes anything adopters depend on, write `framework/migrations/<version>.md`.** Full format spec in `framework/migrations/README.md`. Examples that require a migration file:
+
+- Renaming a skill dir, a rule, a template, a bin script, or a command
+- Splitting a single file into multiple (e.g. one large skill's SKILL.md becomes SKILL.md + docs/)
+- Deleting a file adopters are likely using (skill, rule, template, command, agent, bin script)
+- Changing the `docs/` layout that `template/docs/` seeded
+- Changing load-bearing sections of `template/CLAUDE.md` (load policy, required sections, rule references)
+- Changing the `.alice/` ↔ `.claude/` symlink convention
+- Changing a bin script's CLI surface (flags/args reordered or removed)
+
+Examples that do **not** need a migration file: adding a new skill/agent/rule/template/command, editing the body of an existing file without renaming it, editing docs/comments, fixing bugs in bin scripts without CLI changes.
+
+If you're unsure, write one — an empty "Manual actions" is cheap, a missing migration that strands adopters is not.
+
+`/sync` is the single source of truth for the upgrade path. Changes to `framework/commands/sync.md` itself count as load-bearing — treat them like public API.
 
 ## Provenance
 
