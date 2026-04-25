@@ -172,7 +172,7 @@ Sort output by updated-desc. Stop after printing; no other action.
 
 1. Resolve slug. If `latest`, pick the most recently updated run dir.
 2. Abort if the run dir is missing or `run.conf` is missing.
-3. Load `run.conf` — re-populate `MODE`, `EFFORT`, `FEATURE`, `BRANCH_AT_START`, `BASE_BRANCH`, `PLAN_FOLDER`, `RUN_SLUG`, `RUN_DIR`. These override any `--mode` / `--effort` / description passed on the command line (a warning is printed if they conflict — the file wins).
+3. Load `run.conf` — re-populate `MODE`, `EFFORT`, `FEATURE`, `BRANCH_AT_START`, `BASE_BRANCH`, `TODO_SLUG`, `PLAN_FOLDER`, `RUN_SLUG`, `RUN_DIR`. These override any `--mode` / `--effort` / description passed on the command line (a warning is printed if they conflict — the file wins).
 4. Verify adopter's current branch matches `BRANCH_AT_START`. If not, `AskUserQuestion`: `A) Check out $BRANCH_AT_START and continue  B) Continue on current branch (risky — commits may land wrong)  C) Abort resume`. Default: A.
 5. Determine the starting step:
    - If `--resume-from <step>` is supplied, start there — ignore any markers beyond it and remove them (treat intermediate as stale).
@@ -307,6 +307,7 @@ effort=$EFFORT
 feature=$(echo "$FEATURE" | tr '\n' ' ' | head -c 500)
 branch_at_start=$(git branch --show-current)
 base_branch=$DEFAULT_BRANCH
+todo_slug=$TODO_SLUG  # empty unless --todo was used
 plan_folder=  # filled in after Step 1
 EOF
 ```
@@ -433,11 +434,19 @@ Run every action in `.alice/rules/post-feature-retro.md`. In order:
 2. **Update `docs/wiki/current-status.md`:** in-flight → shipped.
 3. **Append to `docs/ledger/experiences.md`:** diana writes a short retro entry — what surprised her, which assumption turned out wrong, what the next-adopter of this pattern should know.
 4. **Append to `docs/ledger/decisions.md`:** for any non-obvious choice diana made during the run (from `$RUN_DIR/decisions.md`, dedup & summarize).
-5. **Strike `docs/todos/overview.md`:** in-flight → Done recent. Delete `docs/todos/<slug>.md` detail file if one exists.
+5. **TODO cleanup (conditional on `$TODO_SLUG`).**
+   - **If the run was `--todo <slug>` (i.e. `$TODO_SLUG` is non-empty in `run.conf`):**
+     a. Read `docs/todos/<slug>.md`. If it has a `Status:` field, set it to `Status: done` and append a `Completed:` line with today's date + the diana run slug + the archived plan folder path.
+     b. Move the entry in `docs/todos/overview.md` from its in-flight section to the "Done recent" section. Preserve the original wording; append `→ <archived plan folder>` and the run slug for traceability.
+     c. Delete `docs/todos/<slug>.md`. The detail file's role ends when the work ships — overview + archived plan folder are the durable record. Use `git rm docs/todos/<slug>.md`.
+     d. If the TODO referenced linked items (other todos, issue trackers, wiki pages), re-check those links and update or remove stale references. Log any orphans diana couldn't auto-resolve to `$RUN_DIR/followups.md`.
+   - **If the run was a free-form description (no `$TODO_SLUG`):**
+     a. Strike any matching in-flight entry in `docs/todos/overview.md` if one was implicitly tracking this work (best-effort grep against the feature name/slug). Skip if no match.
+     b. No detail file to delete.
 
 Delegate the wiki step to the `wiki-maintainer` sub-agent (alice ships it) per `post-feature-retro.md`'s recommendation — keeps the drift audit focused.
 
-Log to `$RUN_DIR/transcripts/07-retro.md`.
+Log to `$RUN_DIR/transcripts/07-retro.md`. Include which TODO branch ran (todo-cleanup vs free-form-cleanup) so resume's "completed actions" diff is unambiguous.
 
 ### Step 8 — Doc update (all tiers, binding)
 
