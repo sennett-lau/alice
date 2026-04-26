@@ -187,6 +187,8 @@ Status:          DONE | DONE_WITH_CONCERNS | BLOCKED
 ════════════════════════════════════════
 ```
 
+**Durability rule for the report.** `Symptom`, `Root cause`, and `Related` describe **behaviors and contracts**, not internal structure — name the invariant that broke and the contract that should hold, not "the function on line 42". The next reader should be able to understand what was wrong even after this area is refactored and the line numbers move. `Fix` and `Regression test` are the exception: they reference the artifacts of *this* change, so file:line is the right shape there.
+
 ## Important Rules
 
 - **3+ failed fix attempts → STOP and question the architecture.** Wrong architecture, not failed hypothesis.

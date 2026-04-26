@@ -100,7 +100,8 @@ Every rule in `.claude/rules/` is **binding**. Load on demand when the rule's do
 - `post-feature-retro.md` — the five-action checklist that fires on every ship.
 - `documentation-updates.md` — docs must land in the same PR as behavior changes.
 - `feature-spec-required.md` — spec before non-trivial code.
-- `implementation-quality.md` — the floor: build green, reuse first, small PRs, no silent failures, boundaries validate.
+- `implementation-quality.md` — the floor: build green, reuse first, small PRs, no silent failures, boundaries validate, module shape (deletion test, depth, seams justified by two implementations).
+- `test-discipline.md` — test through the public interface, slice vertically (no all-tests-then-all-code), mock only at system boundaries.
 - `sub-agent-orchestration.md` — any skill that dispatches sub-agents must poll them (≥1/min) for progress and escalate permission blocks to the user rather than silently working around.
 
 ## Working style
