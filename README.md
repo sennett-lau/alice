@@ -25,7 +25,7 @@ A cohesive **agent SOP** for any codebase:
 - **Wiki** — the auto-loaded "what exists today" knowledge base.
 - **Plans** — per-feature folders with spec → review → implement → ship lifecycle.
 - **Ledger** — append-only decisions + post-feature retros + bug patterns.
-- **Rules** — six binding rules covering docs layout, doc updates, spec-required, implementation quality, post-feature retro, sub-agent orchestration.
+- **Rules** — seven binding rules covering docs layout, doc updates, spec-required, implementation quality, test discipline, post-feature retro, sub-agent orchestration.
 - **Templates** — overview / spec / decision / implementation starters.
 - **Skills** — `/plan`, `/qa`, `/browse`, `/review`, `/plan-eng-review`, `/investigate`, `/setup-browser-cookies`, `/security-audit`, `/research`, `/pr-slicer`, `/diana` (end-to-end SOP runner). Each writes state to `<project-root>/.tmp/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`.
 - **Upgrade path** — `/sync` pulls the latest alice into the adopter's `.alice/`. Classifies every changed file into four tiers (safe add / clean update / local conflict / structural migration), walks the user through each, and stamps `.alice/VERSION`. Never auto-commits. Full flow: `framework/commands/sync.md`; structural migrations documented under `framework/migrations/`.
@@ -67,7 +67,7 @@ alice/
   bootstrap/
     README.md                     adoption recipe — the agent reads this and executes the steps
   framework/                      ships to adopter's .alice/
-    rules/                        6 binding rules
+    rules/                        7 binding rules
     templates/                    overview / spec / decision / implementation / todo
     commands/                     /plan, /sync commands
     skills/                       /qa, /browse, /review, /plan-eng-review,
@@ -121,3 +121,4 @@ Distilled from an internal project's agent operating manual on 2026-04-20. The f
 - [graphify](https://github.com/safishamsi/graphify)
 - [gstack](https://github.com/garrytan/gstack)
 - [Karpathy — LLM-maintained wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 
+- [mattpocock/skills](https://github.com/mattpocock/skills)

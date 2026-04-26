@@ -16,7 +16,7 @@ alice/
   README.md                public-facing tour + agent quickstart
   bootstrap/README.md      step-by-step adoption recipe
   framework/               ships to adopter's .alice/
-    rules/                 6 binding rules (ship to adopter at .alice/rules/)
+    rules/                 7 binding rules (ship to adopter at .alice/rules/)
     templates/             overview / spec / decision / implementation / todo
     commands/              /plan + /sync commands (ship to adopter at .alice/commands/)
     skills/<name>/         skill sources — ship to adopter at .alice/skills/<name>/
