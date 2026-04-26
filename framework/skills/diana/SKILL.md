@@ -1,7 +1,7 @@
 ---
 name: diana
 preamble-tier: 4
-version: 1.2.0
+version: 1.3.0
 description: |
   Run the alice SOP end-to-end for a given feature description with little
   or no human interaction. Two modes (`fully-auto` default, `murmur` for
@@ -58,7 +58,7 @@ Run state lives at `<repo>/.tmp/diana/<run-slug>/`. Gitignored. Every autonomous
 | `--todo` | TODO slug | — | Reads description from `docs/todos/<slug>.md`. Skill will update that same file's status as it progresses. |
 | `--from-file` | path to a markdown file | — | Reads description from file. Useful when the user has a draft spec sitting elsewhere. |
 | `--resume` | run slug (or `latest`) | — | Resume an interrupted run. See "Resume" section. Must also supply `--resume-from` if the last step's status is ambiguous. |
-| `--resume-from` | step name (`plan`, `plan-eng-review`, `implement`, `code-review`, `pr-slicer`, `security-audit`, `retro`, `doc-update`) | — | Force-pick the step to restart from regardless of state markers. Useful when an interrupted step left partial state diana can't safely auto-detect. |
+| `--resume-from` | step name (`plan`, `plan-eng-review`, `implement`, `code-review`, `pr-slicer`, `security-audit`, `retro`, `doc-update`, `drain`) | — | Force-pick the step to restart from regardless of state markers. Useful when an interrupted step left partial state diana can't safely auto-detect. |
 | `--list-runs` | — | — | Print all runs under `.tmp/diana/` with their status and last-updated timestamp, then stop. Use this before `--resume` to pick the right slug. |
 
 Convenience short-flags the skill also accepts:
@@ -133,6 +133,7 @@ To prevent murmur turning into a constant-prompt run, diana still applies the De
 | 6. Security audit (`/security-audit`) | — | — | ✓ | ✓ |
 | 7. Retro (`post-feature-retro.md`) | ✓ | ✓ | ✓ | ✓ |
 | 8. Doc update (`documentation-updates.md`) | ✓ | ✓ | ✓ | ✓ |
+| 9. Drain (sub-agent + background-bash cleanup) | ✓ | ✓ | ✓ | ✓ |
 
 **Retro + doc update always run.** Both are covered by alice's binding rules (`.alice/rules/post-feature-retro.md`, `.alice/rules/documentation-updates.md`); skipping them ships an incomplete feature by alice's own definition. The effort tiers vary *adversarial* thoroughness, not SOP completeness.
 
@@ -214,6 +215,7 @@ Sort output by updated-desc. Stop after printing; no other action.
 | `security-audit` | Always restart — audit is idempotent and cheap to re-run on the final diff. |
 | `retro` | Step has 5 sub-actions (archive / wiki / experiences / decisions / todo). If `$RUN_DIR/transcripts/07-retro.md` exists, diff its "completed actions" list against the 5; continue with the unfinished ones. |
 | `doc-update` | Always restart — idempotent. |
+| `drain` | Always restart — idempotent. Re-enumerates spawned agents from the transcripts and re-asserts terminal state. Cheap. |
 
 If any step's continue logic detects a state diana cannot safely reconcile (e.g. uncommitted changes that don't match `implementation.md`), fall back to `AskUserQuestion` with the three A/B/C restart/continue/abort options.
 
@@ -281,6 +283,7 @@ The step ordering (used by resume to find the first non-done step):
 06-security-audit
 07-retro
 08-doc-update
+09-drain
 ```
 
 ### Branch setup (new runs only — runs before run.conf is written)
@@ -480,31 +483,86 @@ Per `.alice/rules/documentation-updates.md`: any wiki page that drifted because 
 
 Skips: if no wiki page drift detected, log "no drift" and proceed.
 
-Final output: diana prints a structured summary to the user:
+Step 8 does NOT print the final summary — that is Step 9's job, after drain has confirmed every spawned agent is terminated.
 
-```
-diana run complete — $RUN_SLUG
+### Step 9 — Drain (all tiers, binding)
 
-Mode: <fully-auto | murmur>
-Effort: <low | medium | high | max>
-Feature: <one-line>
+Before the final summary, diana verifies every sub-agent she spawned during the run has actually terminated, and every backgrounded shell she started has exited. Upstream Claude Code has known bugs where the main session reports "done" while spawned agents are still alive: the user `/exit`s and orphans accumulate, or `--resume` later crashes on the deep subagent transcript. The drain phase is diana's mitigation — and the reason no other step is allowed to print "diana run complete."
 
-Steps:
-  [done]  1. Plan — spec/<path> — locked after Step 2
-  [done]  2. Plan-eng-review — N findings (M outside-voice), all addressed
-  [done]  3. Implement — K files changed, J commits, <lines> inserted
-  [done]  4. Code review — clean (or N deferred to followups)
-  [skipped] 5. PR-slicer — diff under threshold
-  [done]  6. Security audit — clean
-  [done]  7. Retro — archived + wiki + ledger + todo
-  [done]  8. Doc update — N wiki pages updated
+**Why this is its own step:** it must run last (after retro + doc-update have themselves spawned agents — wiki-maintainer, doc passes) and it must always run — there is no effort tier in which orphaned sub-agents or background shells are acceptable.
 
-Autonomous decisions: see $RUN_DIR/decisions.md
-Followups:           see $RUN_DIR/followups.md (if any)
-Branch: <name> — changes staged locally. Push / PR is up to you.
-```
+1. **Enumerate spawns.** Walk every transcript under `$RUN_DIR/transcripts/` and collect:
+   - All agent IDs recorded under `## Spawned agents` subheadings (see "Sub-agent capture contract" below) — call this set `SPAWNED_IDS`.
+   - All background-bash shell IDs recorded under `## Background shells` subheadings — call this set `BG_SHELLS`.
+
+   If a step's transcript has no capture subheading despite that step using `Agent` or `Bash(run_in_background: true)`, fall back to grepping the transcript file for `agentId:` / shell-ID markers — best-effort but lossy. Log the missing capture as a contract violation in `$RUN_DIR/drain.log`.
+
+2. **Poll sub-agents until terminated.** For each ID in `SPAWNED_IDS`:
+   - Call the agent-status tool (`TaskGet` or equivalent) to read current state.
+   - If state is `completed` / `stopped` / `failed` — drain `TaskOutput` once to capture any unread tail, append to the spawning step's transcript under a `## Drain tail` subheading, mark the ID cleared.
+   - If state is still `running` / `in-progress` — poll every 30s up to 5 minutes (10 polls). The orchestration rule's ≥1/min cadence applies; append each poll result to `$RUN_DIR/drain.log`.
+   - If still not terminated after 5 minutes — call `TaskStop` to force-terminate. Record the forced stop in `decisions.md` under `## Drain` with the agent ID, the step that spawned it, the last-known status, and the reason ("upstream-bug workaround — agent did not self-terminate"). This is a known-bug workaround; surface it so the user sees what happened.
+
+3. **Background-bash sweep.** For each shell ID in `BG_SHELLS`:
+   - Read its current status. If exited, capture final output to the spawning step's transcript and clear.
+   - If still running and the work is genuinely complete (e.g. a dev server started for verify checks, never expected to self-exit), kill it explicitly. Record in `decisions.md` under `## Drain`.
+   - If still running and unclear whether the work is done — poll up to 2 minutes, then kill. Log.
+
+4. **Final assertion.** Drain succeeds only if all of:
+   - No `*.in-progress` markers remain under `$RUN_DIR/steps/` (resume safety — a leftover marker would cause the next `--resume` to misroute).
+   - Every ID in `SPAWNED_IDS` is in a terminal state.
+   - Every ID in `BG_SHELLS` has exited or been killed.
+
+   If any assertion fails, diana does **not** print the success summary. Instead she writes `$RUN_DIR/DRAIN-FAILED.md` listing the survivors (agent ID + step + last-known status + force-stop attempted yes/no), prints a one-line handback, and exits without marking Step 9 done:
+
+   ```
+   [diana] Drain failed: <N> agents and <M> shells did not terminate. See $RUN_DIR/DRAIN-FAILED.md before /exit. Resume with /diana --resume <slug> --resume-from drain.
+   ```
+
+   Do **not** auto-`/exit` the session — the user must investigate (orphans may still be consuming RAM, and `/exit` while they're alive is the path to the unrecoverable-resume bug).
+
+5. **Mark step done + final summary.** Only when assertions pass, `mv 09-drain.in-progress 09-drain.done`, then print:
+
+   ```
+   diana run complete — $RUN_SLUG
+
+   Mode: <fully-auto | murmur>
+   Effort: <low | medium | high | max>
+   Feature: <one-line>
+
+   Steps:
+     [done]    1. Plan — spec/<path> — locked after Step 2
+     [done]    2. Plan-eng-review — N findings (M outside-voice), all addressed
+     [done]    3. Implement — K files changed, J commits, <lines> inserted
+     [done]    4. Code review — clean (or N deferred to followups)
+     [skipped] 5. PR-slicer — diff under threshold
+     [done]    6. Security audit — clean
+     [done]    7. Retro — archived + wiki + ledger + todo
+     [done]    8. Doc update — N wiki pages updated
+     [done]    9. Drain — A agents cleared (F force-stopped), B shells cleared
+
+   Autonomous decisions: see $RUN_DIR/decisions.md
+   Followups:           see $RUN_DIR/followups.md (if any)
+   Branch: <name> — changes staged locally. Push / PR is up to you.
+   ```
 
 Never auto-push. Never auto-create PR. Diana stops at "changes staged locally" and hands back.
+
+### Sub-agent capture contract
+
+Every step that uses the `Agent` tool MUST record the returned agent ID in its transcript file under a `## Spawned agents` subheading, one line per dispatch:
+
+```
+- <agent-id>  type=<subagent_type>  step=<step-name>  spawned=<ISO timestamp>  background=<true|false>
+```
+
+Same for any `Bash(run_in_background: true)` under a `## Background shells` subheading:
+
+```
+- bash:<shell-id>  cmd="<first 60 chars>"  step=<step-name>  spawned=<ISO>
+```
+
+This lets Step 9 enumerate cheaply without scanning JSONL. Steps that skip the capture force Step 9 into the lossy fallback (grep) and log a contract violation. The capture is part of each dispatching step's bookkeeping, not Step 9's — Step 9 only consumes.
 
 ---
 
@@ -590,7 +648,9 @@ run.conf                 — immutable run config (mode/effort/feature/branches/
 manifest.md              — human-readable run summary
 decisions.md             — every autonomous decision + rationale
 followups.md             — deferred review findings (feeds into post-run follow-up)
+drain.log                — Step 9 poll history per spawned agent / shell
 BLOCKED.md               — only if diana escalated mid-run
+DRAIN-FAILED.md          — only if Step 9 could not bring all spawns to a terminal state
 steps/                   — step markers — source of truth for resume
   00-murmur.{skipped|done}
   01-plan.done
@@ -601,6 +661,7 @@ steps/                   — step markers — source of truth for resume
   06-security-audit.{done|skipped}
   07-retro.done
   08-doc-update.done
+  09-drain.done
 transcripts/             — narrative output per step
   00-murmur.md           — murmur clarification Q&A (if ran)
   01-plan.md             — full /plan output (spec draft)
@@ -612,6 +673,8 @@ transcripts/             — narrative output per step
   07-retro.md            — post-feature-retro action results
   08-doc-update.md       — wiki pages updated
 ```
+
+Each step's transcript that dispatched sub-agents or background shells also carries `## Spawned agents` and `## Background shells` subheadings populated by the dispatching step (see "Sub-agent capture contract"). These are what Step 9 reads.
 
 Everything under `.tmp/` is gitignored. The audit trail stays with the local checkout; deleting the checkout deletes the trail.
 
@@ -677,3 +740,5 @@ One line per step — no prose, no filler. On resume, diana prints the resume ba
 - **Step markers are sacred.** Never delete a `.done` marker except when explicitly restarting that step via `--resume-from`. Never write a `.done` marker without actually completing the step's work. Markers are the resume contract — faking them strands future diana runs.
 - **Resume preserves autonomy.** A resumed run uses the same mode/effort as the original (loaded from `run.conf`). If the user wants different mode/effort, they start a new run, not resume.
 - **Retro + doc update are binding.** Skipping them would violate `post-feature-retro.md` and `documentation-updates.md`. Every effort tier runs both.
+- **Drain is binding.** Step 9 always runs and is the only step permitted to print the final "diana run complete" summary. No other step prints success. Until drain confirms every spawned sub-agent and background shell is in a terminal state, the run is not done — even if every other step is `.done`. This protects against upstream Claude Code bugs where main reports done while spawned agents keep running, which corrupts `--resume` later. If drain fails, diana writes `DRAIN-FAILED.md` and hands back without `/exit`-ing.
+- **Sub-agent capture is binding.** Any step that dispatches an `Agent` or starts a `Bash(run_in_background: true)` MUST record the returned ID in its transcript under the `## Spawned agents` / `## Background shells` subheadings. Step 9's enumeration depends on it. Skipping the capture forces lossy fallback (grep) and is logged as a contract violation.
