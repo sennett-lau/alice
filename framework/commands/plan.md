@@ -37,7 +37,11 @@ Ask the user in short, focused prompts. One field at a time — do not dump the 
 10. **Risks** — concrete, not "might be slow".
 11. **Open questions** — anything that must be decided before locking.
 
-For each field, if the user's answer is thin (< 1 sentence for narrative fields, 0 bullets for list fields), push back once with a specific prompt before accepting.
+**Step 2 discipline:**
+
+- **Codebase-first.** If a question can be answered by reading the code, read the code — don't burn a user turn on it. Surface what you found ("`OrderService.cancel` already short-circuits when `status === 'shipped'`; should the new path do the same?"), then ask only what's still ambiguous.
+- **Sharpen overloaded terms.** When the user uses a word that already has a definition in `docs/wiki/domain-model.md` — or one that clearly maps to two distinct concepts — propose the canonical term and confirm before writing it into the spec. Synonym drift in the spec becomes synonym drift in the code. If the term isn't in the wiki yet but matters for this feature, flag it as an open ambiguity and offer to add it to `domain-model.md` after sign-off.
+- For each field, if the user's answer is thin (< 1 sentence for narrative fields, 0 bullets for list fields), push back once with a specific prompt before accepting.
 
 ### 3. Ledger + archive sweep (before writing)
 

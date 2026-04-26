@@ -18,6 +18,15 @@
 - **Boundaries validate, internals trust.** Validate at system edges (user input, external APIs, third-party responses). Don't re-validate internal types that the type system already guarantees.
 - **Single source of truth.** Every constant lives in one place. Cross-package types come from the shared package, not duplicated.
 
+## Module shape
+
+How code is carved into modules / interfaces / seams. The floor here is "no abstractions for single-use code"; this section is the same rule sharpened.
+
+- **Deletion test.** Before adding a module, interface, base class, or extension point, ask: if this didn't exist, what would concretely break? If the answer is "nothing concrete, but it feels cleaner", delete the design and inline.
+- **Depth over breadth.** Prefer deep modules — a small public interface that hides substantial functionality — over shallow modules that forward the same parameters with little added behavior. Shallow modules add a layer to read past without saving the reader anything.
+- **Seams justified by two implementations.** A seam (interface / port / plugin point) is paid for by **two real implementations**, or **one real + one test fake that already earns its keep**. One implementation = a hypothetical seam — don't ship it. Refactor to the seam when the second implementation actually arrives.
+- **Adapters at system boundaries only.** Wrap external systems (DB drivers, HTTP clients, vendor SDKs, the clock, the filesystem) so the boundary doesn't leak inward. Do **not** wrap your own internal modules in adapters — that's a seam without justification, and it doubles the surface to maintain.
+
 ## Why
 
 These are the floor, not the ceiling. The ceiling is whatever the feature deserves.
