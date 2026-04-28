@@ -2,6 +2,19 @@
 
 **Binding.** Every production change.
 
+## Principles
+
+The *why* behind the non-negotiables below. When two non-negotiables seem to conflict, fall back to these.
+
+- **Simplicity.** Prefer simple solutions. When choosing between a generic fix and a specific bandaid, take the generic one — but always at the root cause, not the symptom. A "simple" patch that hides the underlying bug isn't simple, it's deferred work.
+- **Clarity.** Boring and obvious beats clever. Code is read more than written; favor named intent over compressed expression. Clever code earns its keep only when the boring version measurably fails (perf, correctness) and the cleverness is documented.
+- **Flexibility — at proven seams.** Design extensibility into the places where a second real implementation exists, not where one might. Speculative seams are dead weight; refactor to a seam when the second caller actually arrives. (See "Seams justified by two implementations" below.)
+- **Modularity.** Prefer modular over monolithic — but a module is paid for by what it hides, not by its existence. Avoid monolithic files (one concern per file when concerns are clearly separable); avoid shallow modules (a thin layer that forwards parameters without hiding anything). Both are organizational debt.
+- **Consistency.** Follow the existing codebase and system design unless you have a specific reason to diverge. New patterns split the codebase; if you must introduce one, migrate the old usages or note the migration as a TODO so the split doesn't ossify.
+- **Efficiency.** Prefer stateless designs; reduce read/write operations and request round-trips when the cost is real. Don't optimize speculatively — measure first, then cut. Premature optimization at the cost of clarity violates the previous two principles.
+- **Resilience.** Design for retry-safety: prefer idempotent operations and atomic state transitions. If a step can be replayed, say so explicitly; if it can't, gate it so it can't be replayed by accident.
+- **Refactoring — within blast radius.** Refactor opportunistically inside the change's footprint when it improves the diff. Push back when a requested shortcut hurts long-term maintainability. **Out-of-scope** cleanup goes in `docs/todos/overview.md`, not this PR — that's the surgical-scope rule.
+
 ## Non-negotiables
 
 - **Build green.** No PR merges red. If CI is broken, fix CI first.

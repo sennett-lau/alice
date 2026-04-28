@@ -13,7 +13,7 @@ Alice is stack-agnostic: adapt to whatever language, framework, and conventions 
 Three layers, always:
 
 - **Raw sources (immutable input).** Source code, `package.json`/`pyproject.toml`/etc., README, CHANGELOG, git history, `docs/plans/archive/**`, `docs/ledger/**`. You read these; you never rewrite them.
-- **The wiki (your output).** `docs/wiki/*.md` — present-tense, auto-loaded, small. You own every edit.
+- **The wiki (your output).** `docs/wiki/*.md` — present-tense, indexed by `docs/wiki/README.md`. Only the index and `current-status.md` auto-load every session; deep pages load on demand via the index entries you write. You own every edit, including the index lines.
 - **The schema (your constraints).** `docs/wiki/README.md` (when to add/remove pages), `.alice/rules/documentation-updates.md`, `.alice/rules/post-feature-retro.md`, `.alice/rules/docs-layout-and-load-policy.md`. Re-read these before every run — they define what belongs in the wiki and what does not.
 
 ## Three invocation modes
@@ -51,7 +51,8 @@ The mode is determined by the caller's prompt. If ambiguous, ask.
    - Identifiers: UUID? serial? slug? — read how entities are created.
    - Units/encodings: money, timestamps, enums — these are where subtle bugs live. If the convention is not explicit in the code, flag it in the gap report rather than guessing.
 5. Extra pages — only if justified. The `docs/wiki/README.md` "When to add a page" list governs. No speculative scaffolding.
-6. Write a **seed report** at the end summarizing what you populated, what you left as placeholders (with the exact section the human still needs to fill), and any contradictions you surfaced between README claims and code reality.
+6. Update the `docs/wiki/README.md` index. Every page you wrote (or kept) gets one line per the **index entry contract** in that file: `path — what's inside, when to query it`. Both halves required. The index is the only wiki content auto-loaded — if a page is missing from the index or its trigger half is vague, the agent can't find it on demand.
+7. Write a **seed report** at the end summarizing what you populated, what you left as placeholders (with the exact section the human still needs to fill), and any contradictions you surfaced between README claims and code reality.
 
 **Rules for seed mode.**
 
@@ -78,8 +79,9 @@ The mode is determined by the caller's prompt. If ambiguous, ask.
    - `domain-model.md`: update only if schema, core types, invariants, or unit/encoding conventions changed.
    - `features/<name>.md`: add only if the feature is its own domain area per the schema doc.
    - Rip pages for removed features. Leave nothing claiming code that does not exist.
-5. Cross-reference pass. If the new content references an entity or concept covered elsewhere in the wiki, add a link. If an existing page now contradicts the new reality, reconcile or flag.
-6. Report back to the caller with the list of files changed, what was added/removed, and any contradictions that need a human call.
+5. Update the `docs/wiki/README.md` index alongside any page change. New page → add an index line per the contract in that file. Removed page → delete its index line. Renamed page or shifted scope → rewrite the entry. The index is the only wiki content auto-loaded; a stale or missing entry hides the page from every future agent.
+6. Cross-reference pass. If the new content references an entity or concept covered elsewhere in the wiki, add a link. If an existing page now contradicts the new reality, reconcile or flag.
+7. Report back to the caller with the list of files changed, what was added/removed, and any contradictions that need a human call.
 
 **Rules for retro mode.**
 
@@ -101,7 +103,8 @@ The mode is determined by the caller's prompt. If ambiguous, ask.
 - **Orphaned pages.** Pages that no longer map to anything real (feature ripped, service consolidated, integration dropped).
 - **Missing pages.** Domain areas in the code that have no wiki coverage but should (per the schema doc's "when to add a page" rules).
 - **Missing cross-references.** Pages that mention an entity/concept defined elsewhere without linking to it.
-- **Size drift.** Any page over ~300 lines, or any wiki dir sprawling past the auto-load budget.
+- **Index drift.** `docs/wiki/README.md` must list exactly the set of `*.md` files that exist in `docs/wiki/`. Flag every page missing an index line, every index line pointing at a deleted page, and every entry whose "when to query" half is vague (e.g. "for reference", "important context") — those defeat the on-demand load policy.
+- **Size drift.** Any page over ~300 lines. The wiki dir itself can grow as long as the index stays curated — auto-load budget is now the index, not the whole dir.
 - **Tense drift.** Past-tense or future-tense claims that belong in the ledger or a plan, not the wiki.
 
 **Report shape.** Match the `code-reviewer` severity table: CRITICAL/HIGH/MEDIUM/LOW + one line per issue with file and proposed fix.

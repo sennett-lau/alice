@@ -15,7 +15,7 @@ This file is the top-level briefing for any agent (Claude Code, Codex, etc.) wor
 docs/                 project operating manual (wiki + plans + ledger)
   README.md             layout + load policy
   todos/                live backlog (overview.md auto-loaded; per-TODO detail files load on demand)
-  wiki/                 stable knowledge, auto-loaded
+  wiki/                 stable knowledge (README.md index + current-status.md auto-loaded; deep pages on demand)
   plans/active/         in-flight features
   plans/archive/        frozen post-ship (query-only)
   ledger/               decisions + experiences (query-only)
@@ -60,7 +60,9 @@ Deep architecture: `docs/wiki/architecture.md`. Domain model: `docs/wiki/domain-
 |------|--------|-------------|
 | `CLAUDE.md` (this file) | auto-load | every session |
 | `docs/README.md` | auto-load | every session (layout + load policy detail) |
-| `docs/wiki/**` | auto-load | every session |
+| `docs/wiki/README.md` | auto-load | every session — index of wiki pages with one-line descriptions |
+| `docs/wiki/current-status.md` | auto-load | every session — what's shipped / in flight |
+| `docs/wiki/<page>.md` (other) | load on demand | when the wiki index entry matches the task |
 | `docs/todos/overview.md` | auto-load | every session |
 | `docs/todos/<slug>.md` | load on demand | when working that specific TODO |
 | `docs/plans/active/<current>/overview.md` | auto-load | while feature in flight |
@@ -72,7 +74,9 @@ Deep architecture: `docs/wiki/architecture.md`. Domain model: `docs/wiki/domain-
 | `.claude/templates/**` | load on demand | when creating a plan folder or ledger entry |
 | `.claude/agents/**` | load on demand | when a sub-agent is invoked (see Agent routing) |
 
-Rule of thumb: auto-loaded set is small and current. Query-only set grows unbounded — pull in only when the question needs the history.
+Rule of thumb: auto-loaded set is small and current. Query-only set grows unbounded — pull in only when the question needs the history. The wiki splits the difference: the index always loads, the deep pages query on demand.
+
+> **Small-wiki escape hatch.** If `docs/wiki/` has fewer than 4 content pages beyond `README.md` and `current-status.md`, auto-loading the whole directory is acceptable — the indirection cost outweighs the savings. Flip to index-only as soon as the wiki grows past that threshold.
 
 ## How to work (agent SOP)
 
