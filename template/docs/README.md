@@ -10,12 +10,12 @@ docs/
   todos/                 # live backlog
     overview.md          # index — auto-load every session
     <slug>.md            # per-TODO detail (load on demand)
-  wiki/                  # stable knowledge (auto-load)
-    README.md
-    current-status.md
-    architecture.md
-    domain-model.md
-    ...                  # add pages when a concern becomes real
+  wiki/                  # stable knowledge
+    README.md            # index — auto-load (one-line description of every page)
+    current-status.md    # auto-load — what's shipped / in flight
+    architecture.md      # load on demand
+    domain-model.md      # load on demand
+    ...                  # add pages when a concern becomes real (and an index line for each)
   plans/
     active/              # in-flight feature folders
       <YYYY-MM-DD>_<slug>/
@@ -33,7 +33,9 @@ docs/
 
 | Path | Policy | When |
 |------|--------|------|
-| `docs/wiki/**` | auto-load | every session |
+| `docs/wiki/README.md` | auto-load | every session — curated index of every wiki page |
+| `docs/wiki/current-status.md` | auto-load | every session — what's shipped / in flight |
+| `docs/wiki/<page>.md` (other) | load on demand | when the index entry matches the task |
 | `docs/todos/overview.md` | auto-load | every session |
 | `docs/todos/<slug>.md` | load on demand | when working that specific TODO |
 | `docs/plans/active/<current>/overview.md` | auto-load | while feature is in flight |
@@ -42,7 +44,9 @@ docs/
 | `docs/ledger/decisions.md` | query-only | before big architectural calls |
 | `docs/ledger/experiences.md` | query-only | before repeating a pattern that previously burned |
 
-Rule of thumb: wiki is stable and small enough to always load. Plans/active is scoped to the current feature. Archive and ledger grow unbounded — query, don't load.
+Rule of thumb: wiki index always loads, deep wiki pages load on demand. Plans/active is scoped to the current feature. Archive and ledger grow unbounded — query, don't load.
+
+**Small-wiki escape hatch:** if `docs/wiki/` has fewer than 4 content pages beyond `README.md` and `current-status.md`, auto-loading the whole directory is acceptable. Flip to index-only as soon as the wiki grows past that threshold.
 
 ## Tense test
 
