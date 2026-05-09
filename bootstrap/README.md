@@ -22,6 +22,7 @@ target-repo/
     skills/
       browse                -> ../../.alice/skills/browse
       diana                 -> ../../.alice/skills/diana
+      hugh                  -> ../../.alice/skills/hugh
       investigate           -> ../../.alice/skills/investigate
       plan-eng-review       -> ../../.alice/skills/plan-eng-review
       pr-slicer             -> ../../.alice/skills/pr-slicer
@@ -165,7 +166,7 @@ Adopters bootstrapped before `.alice/VERSION` existed get a fallback prompt in `
 
 ```bash
 rm -rf .alice .claude/_alice .claude/{rules,templates,commands} \
-       .claude/skills/{browse,diana,investigate,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
+       .claude/skills/{browse,diana,hugh,investigate,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
        .claude/agents
 ```
 
