@@ -25,9 +25,9 @@ allowed-tools:
 ## Preamble (run first)
 
 ```bash
-# Project-local state dir — all session data under .tmp/ (gitignored).
+# Project-local state dir — all session data under .alice/mem/ (gitignored).
 eval "$(.alice/bin/alice-slug 2>/dev/null || true)"
-mkdir -p "${ROOT:-.}/.tmp"
+mkdir -p "${ROOT:-.}/.alice/mem"
 echo "BRANCH: ${BRANCH:-unknown}"
 ```
 
@@ -43,8 +43,8 @@ You are a QA engineer AND a bug-fix engineer. Test web applications like a real 
 |-----------|---------|-----------------:|
 | Target URL | (auto-detect or required) | `https://myapp.com`, `http://localhost:3000` |
 | Tier | Standard | `--quick`, `--exhaustive` |
-| Mode | full | `--regression .tmp/qa-reports/baseline.json` |
-| Output dir | `.tmp/qa-reports/` | `Output to /tmp/qa` |
+| Mode | full | `--regression .alice/mem/qa-reports/baseline.json` |
+| Output dir | `.alice/mem/qa-reports/` | `Output to /tmp/qa` |
 | Scope | Full app (or diff-scoped) | `Focus on the billing page` |
 | Auth | None | `Sign in to user@example.com`, `Import cookies from cookies.json` |
 
@@ -134,7 +134,7 @@ Print `"Test framework detected: {name} ({N} existing tests)."` Read 2–3 exist
 **Create output directories:**
 
 ```bash
-mkdir -p .tmp/qa-reports/screenshots
+mkdir -p .alice/mem/qa-reports/screenshots
 ```
 
 ---
@@ -143,11 +143,11 @@ mkdir -p .tmp/qa-reports/screenshots
 
 Before falling back to git diff heuristics, check for richer test plan sources:
 
-1. **Project-scoped test plans:** Check `.tmp/projects/` for recent `*-test-plan-*.md` files for this repo
+1. **Project-scoped test plans:** Check `.alice/mem/projects/` for recent `*-test-plan-*.md` files for this repo
    ```bash
    setopt +o nomatch 2>/dev/null || true  # zsh compat
    eval "$(.alice/bin/alice-slug 2>/dev/null)"
-   ls -t .tmp/projects/$SLUG/*-test-plan-*.md 2>/dev/null | head -1
+   ls -t .alice/mem/projects/$SLUG/*-test-plan-*.md 2>/dev/null | head -1
    ```
 2. **Conversation context:** Check if a prior `/plan-eng-review` produced test plan output in this conversation
 3. **Use whichever source is richer.** Fall back to git diff analysis only if neither is available.
@@ -441,7 +441,7 @@ Record baseline health score at end of Phase 6.
 ## Output Structure
 
 ```
-.tmp/qa-reports/
+.alice/mem/qa-reports/
 ├── qa-report-{domain}-{YYYY-MM-DD}.md    # Structured report
 ├── screenshots/
 │   ├── initial.png                        # Landing page annotated screenshot
@@ -546,7 +546,7 @@ The test MUST:
   ```
   // Regression: ISSUE-NNN — {what broke}
   // Found by /qa on {YYYY-MM-DD}
-  // Report: .tmp/qa-reports/qa-report-{domain}-{date}.md
+  // Report: .alice/mem/qa-reports/qa-report-{domain}-{date}.md
   ```
 
 Test type decision:
@@ -606,13 +606,13 @@ After all fixes are applied:
 
 Write the report to both local and project-scoped locations:
 
-**Local:** `.tmp/qa-reports/qa-report-{domain}-{YYYY-MM-DD}.md`
+**Local:** `.alice/mem/qa-reports/qa-report-{domain}-{YYYY-MM-DD}.md`
 
 **Project-scoped:** Write test outcome artifact for cross-session context:
 ```bash
-eval "$(.alice/bin/alice-slug 2>/dev/null)" && mkdir -p .tmp/projects/$SLUG
+eval "$(.alice/bin/alice-slug 2>/dev/null)" && mkdir -p .alice/mem/projects/$SLUG
 ```
-Write to `.tmp/projects/{slug}/{user}-{branch}-test-outcome-{datetime}.md`
+Write to `.alice/mem/projects/{slug}/{user}-{branch}-test-outcome-{datetime}.md`
 
 **Per-issue additions** (beyond standard report template):
 - Fix Status: verified / best-effort / reverted / deferred

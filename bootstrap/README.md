@@ -11,7 +11,7 @@ The contract: every step is **non-destructive**. If something already exists, su
 ```
 target-repo/
   CLAUDE.md                                      (from alice/template/CLAUDE.md, only if missing)
-  .gitignore                                     (.tmp/ appended if missing)
+  .gitignore                                     (.alice/mem/ appended if missing)
   .alice/                                        framework payload — vendored copy of alice/framework/
     rules/  templates/  commands/  skills/  agents/  bin/
   .claude/                                       Claude Code config — relative symlinks into .alice/
@@ -22,6 +22,7 @@ target-repo/
     skills/
       browse                -> ../../.alice/skills/browse
       diana                 -> ../../.alice/skills/diana
+      hugh                  -> ../../.alice/skills/hugh
       investigate           -> ../../.alice/skills/investigate
       plan-eng-review       -> ../../.alice/skills/plan-eng-review
       pr-slicer             -> ../../.alice/skills/pr-slicer
@@ -109,14 +110,16 @@ Otherwise: copy `<alice>/template/CLAUDE.md` → `<target>/CLAUDE.md`. The place
 
 ### 5. Patch `.gitignore`
 
-Ensure `.tmp/` is ignored. If `<target>/.gitignore` exists and already contains a `.tmp/` line, leave it alone. Otherwise append:
+Ensure `.alice/mem/` is ignored. If `<target>/.gitignore` exists and already contains a `.alice/mem/` line (or a broader pattern like `.alice/mem*`), leave it alone. Otherwise append:
 
 ```
 # alice / project-local agent state
-.tmp/
+.alice/mem/
 ```
 
-`.alice/` itself is **vendored content** — keep it tracked (it's how the framework travels with the repo).
+`.alice/` itself is **vendored content** — keep it tracked (it's how the framework travels with the repo). Only `.alice/mem/` (skills' runtime scratch state — diana / hugh / pr-slicer / qa / review run dirs, browser CDP profile, sync clones) is gitignored.
+
+**Migrating from older alice (`.tmp/`).** If the adopter is upgrading from a pre-v1.3.0 alice that wrote state under `.tmp/`, replace any `.tmp/` line in `.gitignore` with `.alice/mem/` and run the v1.3.0 migration to relocate existing state. `/sync` handles this automatically when it runs the v1.3.0 migration.
 
 ### 6. Fill in CLAUDE.md and seed the wiki (manual / agent)
 
@@ -155,7 +158,7 @@ Summarize what you did:
 
 ## Updating alice in adopting projects
 
-Run `/sync` from the adopter repo. It reads `upstream` from `.alice/VERSION`, clones alice to `.tmp/alice-sync/<ts>/`, classifies every changed file into four tiers (safe add / clean update / local conflict / structural migration), walks the user through each, and stamps the new version. Full details: `.alice/commands/sync.md` (and `framework/commands/sync.md` in this repo).
+Run `/sync` from the adopter repo. It reads `upstream` from `.alice/VERSION`, clones alice to `.alice/mem/alice-sync/<ts>/`, classifies every changed file into four tiers (safe add / clean update / local conflict / structural migration), walks the user through each, and stamps the new version. Full details: `.alice/commands/sync.md` (and `framework/commands/sync.md` in this repo).
 
 Adopters bootstrapped before `.alice/VERSION` existed get a fallback prompt in `/sync` asking them to specify their current version or assume pre-versioned. The bootstrap recipe above now stamps `.alice/VERSION` at step 1, so every new adopter starts with a proper provenance record.
 
@@ -165,7 +168,7 @@ Adopters bootstrapped before `.alice/VERSION` existed get a fallback prompt in `
 
 ```bash
 rm -rf .alice .claude/_alice .claude/{rules,templates,commands} \
-       .claude/skills/{browse,diana,investigate,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
+       .claude/skills/{browse,diana,hugh,investigate,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
        .claude/agents
 ```
 
@@ -174,5 +177,5 @@ rm -rf .alice .claude/_alice .claude/{rules,templates,commands} \
 ## Troubleshooting
 
 - **Skill not invoked when expected.** Check `.claude/skills/<name>/SKILL.md` resolves (it's a symlink → `../../.alice/skills/<name>`) and the frontmatter `name:` matches the slash command you typed.
-- **State going to wrong dir.** All alice skills write to `<project-root>/.tmp/`. If a skill writes elsewhere, that's a bug in the SKILL.md — file an issue against alice.
+- **State going to wrong dir.** All alice skills write to `<project-root>/.alice/mem/`. If a skill writes elsewhere (especially the legacy `<project-root>/.tmp/`), that's a bug in the SKILL.md — file an issue against alice.
 - **Browse binary missing.** Build it (step 7). Skills will degrade to API-only when no browser is available.

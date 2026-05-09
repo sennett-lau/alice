@@ -24,9 +24,9 @@ allowed-tools:
 ## Preamble (run first)
 
 ```bash
-# Project-local state dir — all session data under .tmp/ (gitignored).
+# Project-local state dir — all session data under .alice/mem/ (gitignored).
 eval "$(.alice/bin/alice-slug 2>/dev/null || true)"
-mkdir -p "${ROOT:-.}/.tmp"
+mkdir -p "${ROOT:-.}/.alice/mem"
 echo "BRANCH: ${BRANCH:-unknown}"
 ```
 
@@ -79,13 +79,13 @@ After forming your root cause hypothesis, lock edits to the affected module to p
 **If FREEZE_AVAILABLE:** Identify the narrowest directory containing the affected files. Write it to the freeze state file:
 
 ```bash
-STATE_DIR="${CLAUDE_PLUGIN_DATA:-.tmp}"
+STATE_DIR="${CLAUDE_PLUGIN_DATA:-.alice/mem}"
 mkdir -p "$STATE_DIR"
 echo "<detected-directory>/" > "$STATE_DIR/freeze-dir.txt"
 echo "Debug scope locked to: <detected-directory>/"
 ```
 
-Substitute `<detected-directory>` with the actual directory path (e.g., `src/auth/`). Tell the user: "Edits restricted to `<dir>/` for this debug session. This prevents changes to unrelated code. Delete `.tmp/freeze-dir.txt` to remove the restriction."
+Substitute `<detected-directory>` with the actual directory path (e.g., `src/auth/`). Tell the user: "Edits restricted to `<dir>/` for this debug session. This prevents changes to unrelated code. Delete `.alice/mem/freeze-dir.txt` to remove the restriction."
 
 If the bug spans the entire repo or the scope is genuinely unclear, skip the lock and note why.
 

@@ -22,9 +22,9 @@ allowed-tools:
 ## Preamble (run first)
 
 ```bash
-# Project-local state dir — all session data under .tmp/ (gitignored).
+# Project-local state dir — all session data under .alice/mem/ (gitignored).
 eval "$(.alice/bin/alice-slug 2>/dev/null || true)"
-mkdir -p "${ROOT:-.}/.tmp"
+mkdir -p "${ROOT:-.}/.alice/mem"
 echo "BRANCH: ${BRANCH:-unknown}"
 ```
 
@@ -77,8 +77,8 @@ When evaluating architecture, think "boring by default." When reviewing tests, t
 setopt +o nomatch 2>/dev/null || true  # zsh compat
 SLUG=$(.alice/skills/browse/bin/remote-slug 2>/dev/null || basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | tr '/' '-' || echo 'no-branch')
-DESIGN=$(ls -t .tmp/projects/$SLUG/*-$BRANCH-design-*.md 2>/dev/null | head -1)
-[ -z "$DESIGN" ] && DESIGN=$(ls -t .tmp/projects/$SLUG/*-design-*.md 2>/dev/null | head -1)
+DESIGN=$(ls -t .alice/mem/projects/$SLUG/*-$BRANCH-design-*.md 2>/dev/null | head -1)
+[ -z "$DESIGN" ] && DESIGN=$(ls -t .alice/mem/projects/$SLUG/*-design-*.md 2>/dev/null | head -1)
 [ -n "$DESIGN" ] && echo "Design doc found: $DESIGN" || echo "No design doc found"
 ```
 If a design doc exists, read it. Use it as the source of truth for the problem statement, constraints, and chosen approach. If it has a `Supersedes:` field, note that this is a revised design — check the prior version for context on what changed and why.
@@ -328,12 +328,12 @@ The plan should be complete enough that when implementation begins, every test i
 After producing the coverage diagram, write a test plan artifact to the project directory so `/qa` (pass `--report-only` for no-fix mode) can consume it as primary test input:
 
 ```bash
-eval "$(.alice/bin/alice-slug 2>/dev/null)" && mkdir -p .tmp/projects/$SLUG
+eval "$(.alice/bin/alice-slug 2>/dev/null)" && mkdir -p .alice/mem/projects/$SLUG
 USER=$(whoami)
 DATETIME=$(date +%Y%m%d-%H%M%S)
 ```
 
-Write to `.tmp/projects/{slug}/{user}-{branch}-eng-review-test-plan-{datetime}.md`:
+Write to `.alice/mem/projects/{slug}/{user}-{branch}-eng-review-test-plan-{datetime}.md`:
 
 ```markdown
 # Test Plan
@@ -618,7 +618,7 @@ Check the git log for this branch. If there are prior commits suggesting a previ
 After producing the Completion Summary above, persist the review result.
 
 **PLAN MODE EXCEPTION — ALWAYS RUN:** This command writes review metadata to
-`<project-root>/.tmp/` (gitignored project-local state, not project files).
+`<project-root>/.alice/mem/` (gitignored project-local state, not project files).
 The review readiness dashboard depends on this data — skipping this command
 breaks the dashboard.
 

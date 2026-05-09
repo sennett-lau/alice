@@ -155,7 +155,7 @@ If no generation step applies, write `None — migration files are authored dire
 
 When the user's request matches a skill, invoke it via the Skill tool **before** other actions.
 
-The project ships a small, project-local set of skills under `.alice/skills/` (symlinked into `.claude/skills/`). Everything is project-scoped — skills write to `<project-root>/.tmp/`, never to `~/.claude/`.
+The project ships a small, project-local set of skills under `.alice/skills/` (symlinked into `.claude/skills/`). Everything is project-scoped — skills write to `<project-root>/.alice/mem/`, never to `~/.claude/`.
 
 | Request shape | Skill |
 |---------------|-------|
@@ -171,8 +171,9 @@ The project ships a small, project-local set of skills under `.alice/skills/` (s
 | Pull the latest alice framework into `.alice/` (sync skills, commands, agents, migrations) | `/sync` (`.alice/commands/sync.md`) |
 | Slice a large branch / PR into a chain of smaller reviewable PRs with a migration PR first, parallel-safe siblings, and a per-PR review gate | `/pr-slicer` |
 | Run the full alice SOP end-to-end for a given feature description with little / no human interaction (chains `/plan` → `/plan-eng-review` → implement → `/review` → `/pr-slicer` → `/security-audit` → retro + doc update, gated by effort tier) | `/diana` |
+| Fan out multiple `/diana` runs in parallel — one per feature — across isolated git worktrees with port allocation, shared inbox for cross-feature signals, and a single drain at the end | `/hugh` |
 
-**Project-local state.** Any skill that needs scratch space writes to `<project-root>/.tmp/` (gitignored, per-checkout). Never `~/.claude/`, never user-home.
+**Project-local state.** Any skill that needs scratch space writes to `<project-root>/.alice/mem/` (gitignored, per-checkout). Never `~/.claude/`, never user-home.
 
 ## Agent routing
 

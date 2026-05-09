@@ -22,9 +22,9 @@ allowed-tools:
 ## Preamble (run first)
 
 ```bash
-# Project-local state dir — all session data under .tmp/ (gitignored).
+# Project-local state dir — all session data under .alice/mem/ (gitignored).
 eval "$(.alice/bin/alice-slug 2>/dev/null || true)"
-mkdir -p "${ROOT:-.}/.tmp"
+mkdir -p "${ROOT:-.}/.alice/mem"
 echo "BRANCH: ${BRANCH:-unknown}"
 ```
 
@@ -62,7 +62,7 @@ Before reviewing code quality, check: **did they build what was requested — no
 setopt +o nomatch 2>/dev/null || true  # zsh compat
 BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-')
 REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")
-# Compute project slug for .tmp/projects/ lookup
+# Compute project slug for .alice/mem/projects/ lookup
 _PLAN_SLUG=$(git remote get-url origin 2>/dev/null | sed 's|.*[:/]\([^/]*/[^/]*\)\.git$|\1|;s|.*[:/]\([^/]*/[^/]*\)$|\1|' | tr '/' '-' | tr -cd 'a-zA-Z0-9._-') || true
 _PLAN_SLUG="${_PLAN_SLUG:-$(basename "$PWD" | tr -cd 'a-zA-Z0-9._-')}"
 # Search repo-local plan locations only — alice never reads from $HOME or user-global dirs.
@@ -73,7 +73,7 @@ for ACTIVE in docs/plans/active/*/spec.md; do
   grep -lq "$BRANCH" "$ACTIVE" && PLAN="$ACTIVE" && break
 done
 if [ -z "$PLAN" ]; then
-  for PLAN_DIR in ".tmp/projects/$_PLAN_SLUG" ".tmp/plans"; do
+  for PLAN_DIR in ".alice/mem/projects/$_PLAN_SLUG" ".alice/mem/plans"; do
     [ -d "$PLAN_DIR" ] || continue
     PLAN=$(ls -t "$PLAN_DIR"/*.md 2>/dev/null | xargs grep -l "$BRANCH" 2>/dev/null | head -1)
     [ -z "$PLAN" ] && PLAN=$(ls -t "$PLAN_DIR"/*.md 2>/dev/null | xargs grep -l "$REPO" 2>/dev/null | head -1)
