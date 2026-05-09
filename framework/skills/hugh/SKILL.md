@@ -29,12 +29,12 @@ allowed-tools:
 eval "$(.alice/bin/alice-slug 2>/dev/null || true)"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 RUN_TS=$(date -u +%Y%m%dT%H%M%SZ)
-mkdir -p "$ROOT/.tmp/hugh"
+mkdir -p "$ROOT/.alice/mem/hugh"
 echo "BRANCH: $(git branch --show-current)"
 echo "RUN_TS: $RUN_TS"
 ```
 
-Run state lives at `<repo>/.tmp/hugh/<run-slug>/`. Gitignored. Every autonomous decision (split, port allocation, relay) is logged so the user can audit what hugh did without re-running.
+Run state lives at `<repo>/.alice/mem/hugh/<run-slug>/`. Gitignored. Every autonomous decision (split, port allocation, relay) is logged so the user can audit what hugh did without re-running.
 
 **Load the orchestration rule.** Every sub-agent dispatch in this skill must follow `.alice/rules/sub-agent-orchestration.md` — progress polling (≥1/min) and permission escalation. Hugh fans out N background diana sub-agents per run; without polling, a single stuck diana stalls the whole batch silently.
 
@@ -63,7 +63,7 @@ Run state lives at `<repo>/.tmp/hugh/<run-slug>/`. Gitignored. Every autonomous 
 | `--no-split` | — | — | Treat the description as a single feature (forwarded as one diana run). Equivalent to plain `/diana` but routed through hugh's bookkeeping — useful for stress-testing the orchestration. |
 | `--resume` | run slug (or `latest`) | — | Resume an interrupted hugh run. See "Resume" section. |
 | `--resume-feature` | feature slug | — | With `--resume`, restart only the named feature(s) — comma-separated for multiple. Unspecified features keep their prior status. |
-| `--list-runs` | — | — | Print all runs under `.tmp/hugh/` with their status and last-updated timestamp, then stop. |
+| `--list-runs` | — | — | Print all runs under `.alice/mem/hugh/` with their status and last-updated timestamp, then stop. |
 
 Convenience short-flags:
 - `--murmur` → `--mode=murmur`
@@ -92,7 +92,7 @@ Convenience short-flags:
 /hugh --resume latest --resume-feature structured-logging
 ```
 
-If `$ARGUMENTS` is empty AND no runs exist under `.tmp/hugh/`: print the usage block and stop.
+If `$ARGUMENTS` is empty AND no runs exist under `.alice/mem/hugh/`: print the usage block and stop.
 
 ---
 
@@ -121,11 +121,11 @@ If sibling features have wildly different review needs (one trivial, one auth-to
 
 ## Resume
 
-Runs can die mid-orchestration — network drop, token-limit truncation, crash, user interrupt. The `.tmp/hugh/<run-slug>/` dir is the resume source of truth. **Important:** each spawned diana also has its own resumable `.tmp/diana/<diana-run-slug>/` inside its worktree. Hugh resume re-anchors against the hugh run, then either asks each in-flight diana to resume itself (via `/diana --resume <slug>` issued in the worktree), or restarts the feature from scratch if the diana state is unsalvageable.
+Runs can die mid-orchestration — network drop, token-limit truncation, crash, user interrupt. The `.alice/mem/hugh/<run-slug>/` dir is the resume source of truth. **Important:** each spawned diana also has its own resumable `.alice/mem/diana/<diana-run-slug>/` inside its worktree. Hugh resume re-anchors against the hugh run, then either asks each in-flight diana to resume itself (via `/diana --resume <slug>` issued in the worktree), or restarts the feature from scratch if the diana state is unsalvageable.
 
 ### `--list-runs`
 
-Iterate `.tmp/hugh/*/`, print `slug | mode | effort | features=N | running=R | done=D | failed=F | updated=ISO`. Sort by updated-desc. Stop after printing.
+Iterate `.alice/mem/hugh/*/`, print `slug | mode | effort | features=N | running=R | done=D | failed=F | updated=ISO`. Sort by updated-desc. Stop after printing.
 
 ### `--resume <slug|latest>`
 
@@ -135,7 +135,7 @@ Iterate `.tmp/hugh/*/`, print `slug | mode | effort | features=N | running=R | d
 4. For each feature in `features/<slug>/`:
    - Read `status.txt`. States: `queued`, `running`, `done`, `failed`, `blocked`, `aborted`.
    - `done` / `aborted` → skip unless explicitly named in `--resume-feature`.
-   - `running` → treat as interrupted. Read `diana-slug.txt` and `worktree-path.txt`. Check whether the diana run dir at `<worktree>/.tmp/diana/<diana-slug>/` still has a non-`.done` step marker. If yes, re-dispatch the diana sub-agent in that worktree with `/diana --resume <diana-slug>`. If no, mark feature `done` and continue.
+   - `running` → treat as interrupted. Read `diana-slug.txt` and `worktree-path.txt`. Check whether the diana run dir at `<worktree>/.alice/mem/diana/<diana-slug>/` still has a non-`.done` step marker. If yes, re-dispatch the diana sub-agent in that worktree with `/diana --resume <diana-slug>`. If no, mark feature `done` and continue.
    - `failed` / `blocked` → `AskUserQuestion`: `A) Retry this feature from scratch (drop worktree, restart diana)  B) Resume the existing diana run (re-dispatch with /diana --resume)  C) Skip — leave failed  D) Abort hugh resume`.
    - `queued` → start fresh.
 5. Resume monitor loop (Step 4) over all features now in `running` state.
@@ -152,7 +152,7 @@ All steps run under a common run slug. For a new run:
 
 ```bash
 RUN_SLUG="hugh-$(date -u +%Y%m%dT%H%M%SZ)-$(printf '%04x' $((RANDOM%65536)))"
-RUN_DIR="$ROOT/.tmp/hugh/$RUN_SLUG"
+RUN_DIR="$ROOT/.alice/mem/hugh/$RUN_SLUG"
 mkdir -p "$RUN_DIR/features" "$RUN_DIR/inbox" "$RUN_DIR/transcripts" "$RUN_DIR/steps" "$RUN_DIR/worktrees"
 ```
 
@@ -210,9 +210,9 @@ For each feature in `FEATURES[]`, hugh assembles a per-feature prompt that diana
 
 1. **Adopter CLAUDE.md highlights.** Read `<repo>/CLAUDE.md`. Extract any sections named "Critical gotchas", "Dev server", "Migration-class files", "Branching", "Test commands". These are diana's known sections; pass them through verbatim so each spawned diana doesn't re-discover them.
 2. **Port allocation.** If adopter CLAUDE.md declares a dev-server convention (port number + per-instance offset, e.g. "Dev server runs on port 3000; for parallel sessions, increment by 10 per session"), hugh allocates `port_base = declared_port + (i * offset)` per feature index `i`. If not declared, hugh defaults to `port_base = 4100 + (i * 10)` and notes in `decisions.md` that the adopter CLAUDE.md should declare a port convention for predictability.
-3. **Worktree path.** `<repo>/.tmp/hugh/<run-slug>/worktrees/<feature-slug>/`. Absolute.
+3. **Worktree path.** `<repo>/.alice/mem/hugh/<run-slug>/worktrees/<feature-slug>/`. Absolute.
 4. **Sibling features list.** One-line per sibling slug — diana uses this only for awareness (so it can tag inbox messages with intended recipients), never for direct cross-edits.
-5. **Inbox path.** `<repo>/.tmp/hugh/<run-slug>/inbox/<feature-slug>/` — diana writes outbound notes here (one `.md` per note); hugh polls and relays. See Step 4.
+5. **Inbox path.** `<repo>/.alice/mem/hugh/<run-slug>/inbox/<feature-slug>/` — diana writes outbound notes here (one `.md` per note); hugh polls and relays. See Step 4.
 
 Per-feature prompt skeleton written to `$RUN_DIR/features/<feature-slug>/brief.md`:
 
@@ -341,8 +341,8 @@ Poll loop. Every ~60s:
      B) Hold for end-of-run — recipient sees it after their diana completes
      C) Discard — note is irrelevant
      ```
-     On A, hugh writes the note into `<recipient-worktree>/.tmp/hugh-relay/<timestamp>.md` and re-dispatches the recipient with `/diana --resume <recipient-diana-slug>` plus instructions to read that file before continuing. Record the relay in `decisions.md`.
-3. **Status check.** For each `running` feature, check whether `<worktree>/.tmp/diana/<diana-slug>/steps/09-drain.done` exists (the only marker that signals diana fully completed) OR whether `BLOCKED.md` / `DRAIN-FAILED.md` exists in the diana run dir.
+     On A, hugh writes the note into `<recipient-worktree>/.alice/mem/hugh-relay/<timestamp>.md` and re-dispatches the recipient with `/diana --resume <recipient-diana-slug>` plus instructions to read that file before continuing. Record the relay in `decisions.md`.
+3. **Status check.** For each `running` feature, check whether `<worktree>/.alice/mem/diana/<diana-slug>/steps/09-drain.done` exists (the only marker that signals diana fully completed) OR whether `BLOCKED.md` / `DRAIN-FAILED.md` exists in the diana run dir.
    - `09-drain.done` present → set `status.txt` to `done`. Capture `handback.md` if the agent already wrote it; if not, drain `TaskOutput` and synthesize a handback line from the agent's last 2KB of output.
    - `BLOCKED.md` present → set `status.txt` to `blocked`. Copy the path into `handback.md`.
    - `DRAIN-FAILED.md` present → set `status.txt` to `failed` with reason "diana drain failed". Hugh's own drain (Step 7) will inherit and re-attempt.
@@ -373,7 +373,7 @@ For each feature, read its `handback.md`. Aggregate into `$RUN_DIR/transcripts/0
 - Status: <done|blocked|failed|aborted>
 - Worktree: <abs path>
 - Branch: <branch name in that worktree>
-- Diana run: <diana run slug — link to <worktree>/.tmp/diana/<slug>/>
+- Diana run: <diana run slug — link to <worktree>/.alice/mem/diana/<slug>/>
 - Commits: <count> (<first SHA>..<last SHA>)
 - Headline: <one-line>
 - Inbox notes sent: <N>
@@ -484,7 +484,7 @@ All other fully-auto blockers write to `$RUN_DIR/BLOCKED.md` with full context a
 
 ## State & audit trail
 
-`.tmp/hugh/<run-slug>/` layout after a complete run:
+`.alice/mem/hugh/<run-slug>/` layout after a complete run:
 
 ```
 run.conf                 — immutable run config (mode/effort/max-parallel/feature list/branches)
@@ -527,13 +527,13 @@ transcripts/
   07-drain.md            — drain poll log
 ```
 
-Everything under `.tmp/` is gitignored — including the worktrees, even though they're git working trees. The audit trail and worktrees stay with the local checkout; `git worktree remove` (or deleting the run dir) cleans them up.
+Everything under `.alice/mem/` is gitignored — including the worktrees, even though they're git working trees. The audit trail and worktrees stay with the local checkout; `git worktree remove` (or deleting the run dir) cleans them up.
 
 ---
 
 ## Hard rules
 
-- **Hugh is an orchestrator, not an implementer.** Hugh dispatches dianas and aggregates results. Hugh never edits adopter source files outside `<repo>/.tmp/`. Hugh never invokes `/plan`, `/review`, `/security-audit` directly — those are diana's contract, run inside each spawned agent's session.
+- **Hugh is an orchestrator, not an implementer.** Hugh dispatches dianas and aggregates results. Hugh never edits adopter source files outside `<repo>/.alice/mem/`. Hugh never invokes `/plan`, `/review`, `/security-audit` directly — those are diana's contract, run inside each spawned agent's session.
 - **Never push, create PRs, or deploy.** Same as diana. Hugh stops at "staged locally per worktree."
 - **Every sub-agent dispatch follows `.alice/rules/sub-agent-orchestration.md`.** Poll ≥1/min; escalate silence; handle `BLOCKED:` per protocol.
 - **Every spawned diana runs in its own worktree.** No two dianas share a working tree. The user's primary checkout stays clean — hugh does not check out branches there.

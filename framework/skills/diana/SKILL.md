@@ -11,7 +11,7 @@ description: |
   implementation, `/review`, `/pr-slicer` (max, conditional), `/security-audit`
   (high/max), and the binding post-feature retro + doc-update rules. All
   autonomous decisions and sub-agent handbacks are logged under
-  `.tmp/diana/<run-slug>/` for audit. Use when asked to "diana", "run the
+  `.alice/mem/diana/<run-slug>/` for audit. Use when asked to "diana", "run the
   full sop", "auto-implement this feature", "ship this end-to-end".
 allowed-tools:
   - Bash
@@ -30,12 +30,12 @@ allowed-tools:
 eval "$(.alice/bin/alice-slug 2>/dev/null || true)"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 RUN_TS=$(date -u +%Y%m%dT%H%M%SZ)
-mkdir -p "$ROOT/.tmp/diana"
+mkdir -p "$ROOT/.alice/mem/diana"
 echo "BRANCH: $(git branch --show-current)"
 echo "RUN_TS: $RUN_TS"
 ```
 
-Run state lives at `<repo>/.tmp/diana/<run-slug>/`. Gitignored. Every autonomous decision is logged so the user can audit what diana did without re-running the session. The same state dir powers `--resume` after an interrupted run (network drop, token limit, crash) — see the "Resume" and "State & audit trail" sections.
+Run state lives at `<repo>/.alice/mem/diana/<run-slug>/`. Gitignored. Every autonomous decision is logged so the user can audit what diana did without re-running the session. The same state dir powers `--resume` after an interrupted run (network drop, token limit, crash) — see the "Resume" and "State & audit trail" sections.
 
 **Load the orchestration rule.** Every sub-agent dispatch in this skill must follow `.alice/rules/sub-agent-orchestration.md` — progress polling (≥1/min) and permission escalation. Diana fans out several sub-agents per run; without polling, a single stuck agent stalls the whole pipeline silently.
 
@@ -59,7 +59,7 @@ Run state lives at `<repo>/.tmp/diana/<run-slug>/`. Gitignored. Every autonomous
 | `--from-file` | path to a markdown file | — | Reads description from file. Useful when the user has a draft spec sitting elsewhere. |
 | `--resume` | run slug (or `latest`) | — | Resume an interrupted run. See "Resume" section. Must also supply `--resume-from` if the last step's status is ambiguous. |
 | `--resume-from` | step name (`plan`, `plan-eng-review`, `implement`, `code-review`, `pr-slicer`, `security-audit`, `retro`, `doc-update`, `drain`) | — | Force-pick the step to restart from regardless of state markers. Useful when an interrupted step left partial state diana can't safely auto-detect. |
-| `--list-runs` | — | — | Print all runs under `.tmp/diana/` with their status and last-updated timestamp, then stop. Use this before `--resume` to pick the right slug. |
+| `--list-runs` | — | — | Print all runs under `.alice/mem/diana/` with their status and last-updated timestamp, then stop. Use this before `--resume` to pick the right slug. |
 
 Convenience short-flags the skill also accepts:
 - `--murmur` → `--mode=murmur`
@@ -81,7 +81,7 @@ Convenience short-flags the skill also accepts:
 /diana --resume latest --resume-from code-review                    # force-restart from a specific step
 ```
 
-If `$ARGUMENTS` is empty AND no runs exist under `.tmp/diana/`: print the usage block and stop.
+If `$ARGUMENTS` is empty AND no runs exist under `.alice/mem/diana/`: print the usage block and stop.
 
 ---
 
@@ -165,12 +165,12 @@ Otherwise skip slicing — the PR is small enough to review whole. Record the de
 
 ## Resume
 
-Runs can die mid-pipeline — network drop, token-limit truncation, crash, user interrupt. The `.tmp/diana/<run-slug>/` dir is the resume source of truth.
+Runs can die mid-pipeline — network drop, token-limit truncation, crash, user interrupt. The `.alice/mem/diana/<run-slug>/` dir is the resume source of truth.
 
 ### `--list-runs`
 
 ```bash
-for d in "$ROOT/.tmp/diana"/*/; do
+for d in "$ROOT/.alice/mem/diana"/*/; do
   [ -d "$d" ] || continue
   slug=$(basename "$d")
   conf="$d/run.conf"
@@ -236,7 +236,7 @@ All steps run under a common run slug. For a new run:
 
 ```bash
 RUN_SLUG="diana-$(echo "$FEATURE" | head -c 40 | tr -cs 'a-zA-Z0-9' '-' | tr '[:upper:]' '[:lower:]' | sed 's/^-//;s/-$//')-$RUN_TS"
-RUN_DIR="$ROOT/.tmp/diana/$RUN_SLUG"
+RUN_DIR="$ROOT/.alice/mem/diana/$RUN_SLUG"
 mkdir -p "$RUN_DIR/transcripts" "$RUN_DIR/steps"
 ```
 
@@ -641,7 +641,7 @@ In murmur, escalation pauses and prompts:
 
 ## State & audit trail
 
-`.tmp/diana/<run-slug>/` layout after a complete run:
+`.alice/mem/diana/<run-slug>/` layout after a complete run:
 
 ```
 run.conf                 — immutable run config (mode/effort/feature/branches/plan_folder)
@@ -676,7 +676,7 @@ transcripts/             — narrative output per step
 
 Each step's transcript that dispatched sub-agents or background shells also carries `## Spawned agents` and `## Background shells` subheadings populated by the dispatching step (see "Sub-agent capture contract"). These are what Step 9 reads.
 
-Everything under `.tmp/` is gitignored. The audit trail stays with the local checkout; deleting the checkout deletes the trail.
+Everything under `.alice/mem/` is gitignored. The audit trail stays with the local checkout; deleting the checkout deletes the trail.
 
 **During a run:**
 - `steps/<step>.in-progress` is present while the step is executing — this is the "interrupted" signal resume watches for.

@@ -32,10 +32,10 @@ alice/
 
 Almost every file here ships **verbatim** into adopting repos via the bootstrap recipe. That means:
 
-- **Path strings in skill SKILL.md files use adopter-side paths.** `.alice/bin/alice-slug`, `.alice/skills/browse/dist/browse`, `.tmp/...` — these are valid in the adopting repo (where `.alice/` is the vendored framework). They are NOT paths relative to this repo. Don't "fix" them.
+- **Path strings in skill SKILL.md files use adopter-side paths.** `.alice/bin/alice-slug`, `.alice/skills/browse/dist/browse`, `.alice/mem/...` — these are valid in the adopting repo (where `.alice/` is the vendored framework and `.alice/mem/` is the gitignored runtime state dir). They are NOT paths relative to this repo. Don't "fix" them.
 - **`template/CLAUDE.md` is frozen shape for the adopter.** Edits here flow to every future bootstrap. If you want to change the adopter's CLAUDE.md skeleton, edit `template/CLAUDE.md`. If you want to change *this* file (alice maintainer briefing), edit `CLAUDE.md` at the repo root.
 - **`template/docs/` is the adopter's starting `docs/`.** `template/docs/todos/overview.md`, `template/docs/wiki/*.md`, `template/docs/ledger/*.md` — all copied into adopter at bootstrap time. Changes here define the initial shape every new project starts from.
-- **Alice itself has no `docs/`, no `.tmp/`, no `.alice/`.** Alice ships them; it doesn't run them on itself.
+- **Alice itself has no `docs/`, no `.alice/mem/`, no vendored `.alice/`.** Alice ships them; it doesn't run them on itself.
 
 ## Binding maintenance principles
 
@@ -53,7 +53,7 @@ Things that were considered and deliberately dropped:
 - **Stack profiles.** Would either bloat alice or go stale. The agent reads the target repo and writes stack gotchas directly into the adopter's `CLAUDE.md` at setup time.
 - **Deploy / land / ship skills.** Every project's deploy story is different. Adopter owns it in their `CLAUDE.md`.
 - **Design / product-ideation skills.** Taste-driven and not universal. Future skills (research, brainstorm, etc.) may earn a place — but only after they prove themselves across multiple adopting projects.
-- **Telemetry, analytics, update checks, user-home state.** Alice writes state only to the adopter's `.tmp/` (project-local, gitignored). Nothing in `~/.claude/`, nothing phone-home.
+- **Telemetry, analytics, update checks, user-home state.** Alice writes state only to the adopter's `.alice/mem/` (project-local, gitignored). Nothing in `~/.claude/`, nothing phone-home.
 - **A `setup.sh` installer.** The quickstart prompt in `README.md` asks the driving agent to read `bootstrap/README.md` and execute the steps directly. A script would duplicate work and add a maintenance surface.
 
 If a new proposal smells like one of these, push back. If it's genuinely a universal addition, argue the case.

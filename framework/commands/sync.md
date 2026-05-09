@@ -47,7 +47,7 @@ C) Abort — you'll investigate and re-run.
 ## Step 1 — fetch upstream alice
 
 ```bash
-SYNC_DIR=".tmp/alice-sync/$(date -u +%Y%m%dT%H%M%SZ)"
+SYNC_DIR=".alice/mem/alice-sync/$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$SYNC_DIR"
 UPSTREAM=<from VERSION or $ARGUMENTS>
 git clone --quiet "$UPSTREAM" "$SYNC_DIR/latest"
@@ -119,6 +119,8 @@ Sort by semver. These define structural changes that the file-diff walk can't re
 ### Deletions (sub-tier)
 
 Files present in `.alice/` but NOT in upstream's `framework/`. These are ambiguous — could be adopter's local additions, or something alice removed. **Do not auto-delete.** List them as informational and leave them untouched. A migration file handles genuine upstream removals.
+
+**Excluded from the orphan list:** `.alice/mem/` (project-local runtime state — written by every skill, never tracked in `framework/`) and `.alice/VERSION` (provenance file owned by `/sync` itself). `/sync` must never read, write, walk, copy, or list these paths during Tier 1–3 detection.
 
 ---
 
@@ -214,7 +216,7 @@ For each migration file, in semver order:
 3. Print the **Automatic actions** block (don't execute yet).
 4. `AskUserQuestion`: `Apply automatic actions for v<version>? A) Yes  B) Skip  C) Abort sync`
 5. On A: execute the bash block with CWD at the adopter repo root. Capture stdout/stderr. If the script exits non-zero, STOP the sync and point at the backup.
-6. Append the migration's **Manual actions** checklist to `.tmp/alice-sync/TODO.md` (create if missing), prefixed with `## v<version>` heading.
+6. Append the migration's **Manual actions** checklist to `.alice/mem/alice-sync/TODO.md` (create if missing), prefixed with `## v<version>` heading.
 
 ---
 
@@ -235,10 +237,10 @@ Print a summary of added/unchanged symlinks. Do **not** delete symlinks pointing
 Only advance the version if Tier 4 left no unfinished manual items **or** the user explicitly opts in.
 
 ```bash
-PENDING=$(wc -l < .tmp/alice-sync/TODO.md 2>/dev/null || echo 0)
+PENDING=$(wc -l < .alice/mem/alice-sync/TODO.md 2>/dev/null || echo 0)
 if [ "$PENDING" -gt 0 ]; then
   # AskUserQuestion:
-  # "There are manual migration items pending in .tmp/alice-sync/TODO.md.
+  # "There are manual migration items pending in .alice/mem/alice-sync/TODO.md.
   #  Advance .alice/VERSION to v$LATEST_VERSION anyway?
   #  A) Not yet — keep current version stamp, I'll re-run /sync after finishing the checklist
   #  B) Advance — I'll treat the TODO as follow-up work"
@@ -286,7 +288,7 @@ alice sync complete: v$CURRENT_VERSION → v$LATEST_VERSION
   updated:        M files
   conflicts:      K (resolved: X, skipped: Y, markers left: Z)
   migrations ran: J
-  manual items:   L (see .tmp/alice-sync/TODO.md)
+  manual items:   L (see .alice/mem/alice-sync/TODO.md)
 
 Backup: $SYNC_DIR/backup/
 Changes staged — review with `git status` / `git diff`, commit when ready.
@@ -311,5 +313,5 @@ If any step failed partway, do not produce this report — point the user at the
 
 - Never touches `CLAUDE.md`, `docs/`, or `.gitignore` outside of explicit Tier 4 migration auto-actions.
 - Never runs `gh`, `git push`, `git commit`. Read-only against remote except for the clone.
-- Writes only to `.alice/`, `.claude/` (symlinks), `.tmp/alice-sync/`, and paths touched by migration auto-action scripts.
-- Leaves `.tmp/alice-sync/<ts>/` on disk after success — user can rm manually, or a later `/sync` cleans old runs.
+- Writes only to `.alice/`, `.claude/` (symlinks), `.alice/mem/alice-sync/`, and paths touched by migration auto-action scripts.
+- Leaves `.alice/mem/alice-sync/<ts>/` on disk after success — user can rm manually, or a later `/sync` cleans old runs.

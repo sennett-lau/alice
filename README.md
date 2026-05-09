@@ -27,7 +27,7 @@ A cohesive **agent SOP** for any codebase:
 - **Ledger** — append-only decisions + post-feature retros + bug patterns.
 - **Rules** — seven binding rules covering docs layout, doc updates, spec-required, implementation quality, test discipline, post-feature retro, sub-agent orchestration.
 - **Templates** — overview / spec / decision / implementation starters.
-- **Skills** — `/plan`, `/qa`, `/browse`, `/review`, `/plan-eng-review`, `/investigate`, `/setup-browser-cookies`, `/security-audit`, `/research`, `/pr-slicer`, `/diana` (end-to-end SOP runner), `/hugh` (parallel diana fan-out across worktrees). Each writes state to `<project-root>/.tmp/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`.
+- **Skills** — `/plan`, `/qa`, `/browse`, `/review`, `/plan-eng-review`, `/investigate`, `/setup-browser-cookies`, `/security-audit`, `/research`, `/pr-slicer`, `/diana` (end-to-end SOP runner), `/hugh` (parallel diana fan-out across worktrees). Each writes state to `<project-root>/.alice/mem/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`.
 - **Upgrade path** — `/sync` pulls the latest alice into the adopter's `.alice/`. Classifies every changed file into four tiers (safe add / clean update / local conflict / structural migration), walks the user through each, and stamps `.alice/VERSION`. Never auto-commits. Full flow: `framework/commands/sync.md`; structural migrations documented under `framework/migrations/`.
 - **Sub-agents** — `code-reviewer`, `security-reviewer`, `silent-failure-hunter`, `refactor-cleaner`, `seo-specialist`, `wiki-maintainer`, `pr-slicer-executor`. Invoked automatically during the SOP, or delegated into by skills. Stack-agnostic (except `seo-specialist`, which self-gates to web-facing projects); see `template/CLAUDE.md` "Agent routing" for invocation rules.
 
@@ -108,7 +108,7 @@ Alice is a framework, not an app. Updates are rare and surgical. The rules:
 - **One change per PR.** No mixed "rename + new feature".
 - **Genericize ruthlessly.** If a rule, template, or skill starts mentioning a specific framework, stack, or domain, push it back into the adopting project's CLAUDE.md or wiki. Alice stays stack-agnostic.
 - **Skill source-of-truth.** Skill SKILL.md files are the contract. The compiled `browse` daemon is a build artifact — committed for convenience, but rebuildable from `framework/skills/browse/src/`.
-- **No skill should reach into another project's git or `~/.claude/`.** Alice is per-project; its skills write only to `.tmp/`.
+- **No skill should reach into another project's git or `~/.claude/`.** Alice is per-project; its skills write only to `.alice/mem/`.
 
 ## Provenance
 

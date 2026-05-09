@@ -25,7 +25,7 @@ allowed-tools:
 
 ```bash
 eval "$(.alice/bin/alice-slug 2>/dev/null || true)"
-mkdir -p "${ROOT:-.}/.tmp/research"
+mkdir -p "${ROOT:-.}/.alice/mem/research"
 echo "BRANCH: ${BRANCH:-unknown}"
 ```
 
@@ -39,7 +39,7 @@ echo "BRANCH: ${BRANCH:-unknown}"
 
 ## Output location
 
-Default: save the final report to `<project-root>/.tmp/research/<slug>.md` (gitignored, per-checkout).
+Default: save the final report to `<project-root>/.alice/mem/research/<slug>.md` (gitignored, per-checkout).
 
 Promote to permanent only when the user explicitly says "save permanently" or the research backs a plan. Permanent path: `docs/wiki/research/<slug>.md` or inside the relevant plan folder at `docs/plans/active/<current>/research/<slug>.md`.
 
@@ -80,7 +80,7 @@ Use `WebFetch` on the 3–5 most promising URLs to get full content — don't re
 
 ### 5. Synthesize and write the report
 
-Write to `<project-root>/.tmp/research/<slug>.md`:
+Write to `<project-root>/.alice/mem/research/<slug>.md`:
 
 ```markdown
 # <Topic> — research report
@@ -126,7 +126,7 @@ Sub-questions investigated:
 
 ### 6. Deliver
 
-- **Short topics** — post the full report in chat + save to `.tmp/research/`.
+- **Short topics** — post the full report in chat + save to `.alice/mem/research/`.
 - **Long reports** — post the executive summary + key takeaways in chat, link the saved file.
 - Tell the user the file path explicitly so they can promote it if they want it kept.
 

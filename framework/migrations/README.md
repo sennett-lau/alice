@@ -47,7 +47,7 @@ If no automatic actions apply, write `None.` under this heading — don't omit t
 
 ## Manual actions
 
-A checklist `/sync` copies into `.tmp/alice-sync/TODO.md` for the user to complete themselves. One bullet per discrete action. Be specific; reference exact paths.
+A checklist `/sync` copies into `.alice/mem/alice-sync/TODO.md` for the user to complete themselves. One bullet per discrete action. Be specific; reference exact paths.
 
 - [ ] Review the new `docs/ledger/experiences/` layout
 - [ ] Move any orphaned sections from `docs/ledger/experiences/_legacy.md` into the split topic files, then `rm` the legacy file
@@ -75,6 +75,6 @@ Before tagging a release that ships a new migration file:
 1. Bootstrap alice into a throwaway repo at the previous version.
 2. Bump alice locally to the new version.
 3. Run `/sync` from the throwaway repo against your local alice checkout.
-4. Verify: automatic actions run idempotently (re-run them, confirm no-op), manual checklist copied to `.tmp/alice-sync/TODO.md`, `.alice/VERSION` updated correctly.
+4. Verify: automatic actions run idempotently (re-run them, confirm no-op), manual checklist copied to `.alice/mem/alice-sync/TODO.md`, `.alice/VERSION` updated correctly.
 
 If step 4 surfaces issues, fix the migration file and repeat — it's still pre-release.

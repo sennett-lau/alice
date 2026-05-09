@@ -23,9 +23,9 @@ allowed-tools:
 ## Preamble (run first)
 
 ```bash
-# Project-local state dir — all session data under .tmp/ (gitignored).
+# Project-local state dir — all session data under .alice/mem/ (gitignored).
 eval "$(.alice/bin/alice-slug 2>/dev/null || true)"
-mkdir -p "${ROOT:-.}/.tmp"
+mkdir -p "${ROOT:-.}/.alice/mem"
 echo "BRANCH: ${BRANCH:-unknown}"
 ```
 
@@ -77,7 +77,7 @@ If `CLAUDE.md` declares a project-specific risk profile (e.g. "wallet/key handli
 
 When `CLAUDE.md` is silent on risk profile, default to OWASP Top 10 + the LLM/AI section below + supply-chain.
 
-**State hygiene:** `.tmp/` is gitignored — flag any code that writes sensitive data (keys, tokens, PII) outside `.tmp/` paths. Hardcoded API tokens or `Authorization: Bearer` strings in source are critical regardless of stack.
+**State hygiene:** `.alice/mem/` is gitignored — flag any code that writes sensitive data (keys, tokens, PII) outside `.alice/mem/` paths. Hardcoded API tokens or `Authorization: Bearer` strings in source are critical regardless of stack.
 
 ## Instructions
 
@@ -551,7 +551,7 @@ For each finding:
 5. **Audit exposure window** — when committed? When removed? Was repo public?
 6. **Check for abuse** — review provider's audit logs
 
-**Trend Tracking:** If prior reports exist in `.tmp/security-reports/`:
+**Trend Tracking:** If prior reports exist in `.alice/mem/security-reports/`:
 ```
 SECURITY POSTURE TREND
 ══════════════════════
@@ -579,10 +579,10 @@ Match findings across reports using the `fingerprint` field (sha256 of category 
 ### Phase 14: Save Report
 
 ```bash
-mkdir -p .tmp/security-reports
+mkdir -p .alice/mem/security-reports
 ```
 
-Write findings to `.tmp/security-reports/{date}-{HHMMSS}.json` using this schema:
+Write findings to `.alice/mem/security-reports/{date}-{HHMMSS}.json` using this schema:
 
 ```json
 {
@@ -635,7 +635,7 @@ Write findings to `.tmp/security-reports/{date}-{HHMMSS}.json` using this schema
 }
 ```
 
-If `.tmp/` is not in `.gitignore`, note it in findings — security reports should stay local.
+If `.alice/mem/` is not in `.gitignore`, note it in findings — security reports should stay local.
 
 ## Important Rules
 

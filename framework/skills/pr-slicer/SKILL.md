@@ -6,7 +6,7 @@ description: |
   Slice a large working branch / PR into a chain of smaller, reviewable PRs.
   Detects adopter-declared migration-class files (forces a migration PR
   first), builds a dependency graph, writes an `overview.md` + per-PR spec
-  folder under `.tmp/pr-slicer/`, then dispatches `pr-slicer-executor`
+  folder under `.alice/mem/pr-slicer/`, then dispatches `pr-slicer-executor`
   sub-agents (optionally in git worktrees) to build each PR. Main session
   keeps the remote side — push, `gh pr create`, rebase cascade. Use when
   asked to "slice this PR", "pr-slicer", "break this branch into PRs",
@@ -27,11 +27,11 @@ allowed-tools:
 ```bash
 eval "$(.alice/bin/alice-slug 2>/dev/null || true)"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
-mkdir -p "$ROOT/.tmp/pr-slicer"
+mkdir -p "$ROOT/.alice/mem/pr-slicer"
 echo "BRANCH: $(git branch --show-current)"
 ```
 
-State lives at `<repo>/.tmp/pr-slicer/<slug>/`. Gitignored. No telemetry.
+State lives at `<repo>/.alice/mem/pr-slicer/<slug>/`. Gitignored. No telemetry.
 
 **Load the orchestration rule.** Every sub-agent dispatch in this skill must follow `.alice/rules/sub-agent-orchestration.md` — progress polling (≥1/min) and permission escalation. Read it before Step 6.
 
@@ -93,7 +93,7 @@ Resolve:
 - `SRC_BRANCH` — the big branch being sliced
 - `BASE` — base branch (default `main`; use PR's baseRefName if PR given)
 - `SLUG` — `pr-slicer-$(echo "$SRC_BRANCH" | tr '/' '-')-$(date +%Y%m%d-%H%M)`
-- `PLAN_DIR` — `$ROOT/.tmp/pr-slicer/$SLUG`
+- `PLAN_DIR` — `$ROOT/.alice/mem/pr-slicer/$SLUG`
 
 ```bash
 mkdir -p "$PLAN_DIR/spec"
@@ -321,7 +321,7 @@ git checkout -b <slice-branch>
 **Parallel mode.** Each parallel-safe sibling gets its own worktree:
 
 ```bash
-git worktree add "$ROOT/.tmp/pr-slicer/worktrees/<branch-slug>" -b <branch> <base>
+git worktree add "$ROOT/.alice/mem/pr-slicer/worktrees/<branch-slug>" -b <branch> <base>
 ```
 
 Do not let two executors share a working tree. Never start a new slice with uncommitted changes in the main tree.
