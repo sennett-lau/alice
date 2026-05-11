@@ -1,6 +1,46 @@
 # Alice
 
-A generic agentic docs/plans/ledger framework for software projects. Stack- and domain-agnostic: the framework is the same shape for every codebase, and project-specific details get filled in by the adopting agent at setup time.
+An **Agentic Development Framework with simplifications** for builders.
+
+Alice vendors a small operating layer into your codebase so coding agents can
+work with stronger rails: living project memory, spec-first implementation,
+review discipline, browser QA, user-testing diagnosis, and iterative resolution
+loops. It is built for software work inside real repos. Alice stays stack- and
+domain-agnostic; the adopting agent fills in project-specific details from the
+actual codebase during setup.
+
+## Start here
+
+After Alice is adopted into a repo, most work starts from one of these paths.
+
+**Build Loop**
+
+- `/plan` — turn non-trivial work into a spec-backed plan folder.
+- `/plan-eng-review` — challenge a drafted plan before implementation starts.
+- `/investigate` — chase bugs, regressions, stack traces, and broken behavior to root cause.
+- `/qa` — browser-test a feature or flow and capture evidence.
+- `/review` — review a branch before landing.
+
+**Validation Loops**
+
+- `/diagnosis` — run parallel user-testing validators and promote findings into `docs/todos/findings/`.
+- `/ouroboros` — resolve the findings backlog through a diagnose → resolve → evaluate → merge loop.
+
+**Automation Wrappers**
+
+- `/diana` — run the full single-feature coding SOP: plan, review, implement, review, optional audit, retro, docs.
+- `/hugh` — split multiple independent features and run one isolated `/diana` per feature in parallel worktrees.
+
+**Utilities**
+
+- `/browse` — direct browser control for targeted checks.
+- `/security-audit` — focused security review.
+- `/research` — source-grounded research with citations.
+- `/pr-slicer` — split large branches into reviewable PR slices.
+- `/setup-browser-cookies` — import real-browser auth state for browser testing.
+
+If you are installing Alice into a repo for the first time, use the quickstart
+below.
 
 ## Quickstart — paste this into your agent
 
@@ -20,17 +60,29 @@ you did.
 
 ## What alice gives you
 
-A cohesive **agent SOP** for any codebase:
+A cohesive **agentic operating system** for any codebase:
 
 - **Wiki** — the auto-loaded "what exists today" knowledge base.
 - **Plans** — per-feature folders with spec → review → implement → ship lifecycle.
 - **Ledger** — append-only decisions + post-feature retros + bug patterns.
 - **Rules** — seven binding rules covering docs layout, doc updates, spec-required, implementation quality, test discipline, post-feature retro, sub-agent orchestration.
 - **Templates** — overview / spec / decision / implementation starters.
-- **Skills** — `/plan`, `/qa`, `/diagnosis`, `/ouroboros`, `/browse`, `/review`, `/plan-eng-review`, `/investigate`, `/setup-browser-cookies`, `/security-audit`, `/research`, `/pr-slicer`, `/diana` (end-to-end SOP runner), `/hugh` (parallel diana fan-out across worktrees). Each writes state to `<project-root>/.alice/mem/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`. Every skill follows a shared authoring contract — see `framework/skills/README.md`.
+- **Skills** — project-local workflows for planning, review, QA, diagnosis, research, security, parallel implementation, and iterative improvement. Each writes state to `<project-root>/.alice/mem/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`. Every skill follows a shared authoring contract — see `framework/skills/README.md`.
 - **References** — harness-agnostic reference catalogs adopters and skills can link to. Currently: `orchestration-patterns.md` (5 endorsed multi-agent shapes + 4 anti-patterns; pairs with the `sub-agent-orchestration` rule).
 - **Upgrade path** — `/sync` pulls the latest alice into the adopter's `.alice/`. Classifies every changed file into four tiers (safe add / clean update / local conflict / structural migration), walks the user through each, and stamps `.alice/VERSION`. Never auto-commits. Full flow: `framework/commands/sync.md`; structural migrations documented under `framework/migrations/`.
-- **Sub-agents** — `code-reviewer`, `security-reviewer`, `user-testing-validator`, `findings-triager`, `resolution-evaluator`, `silent-failure-hunter`, `refactor-cleaner`, `seo-specialist`, `wiki-maintainer`, `pr-slicer-executor`. Invoked automatically during the SOP, or delegated into by skills. Stack-agnostic (except `seo-specialist`, which self-gates to web-facing projects); see `template/CLAUDE.md` "Agent routing" for invocation rules.
+- **Sub-agents** — focused roles for code review, security review, user-testing validation, findings triage, resolution evaluation, silent failure hunting, refactor cleanup, SEO, wiki maintenance, and PR slicing. Invoked automatically during the SOP, or delegated into by skills. Stack-agnostic (except `seo-specialist`, which self-gates to web-facing projects); see `template/CLAUDE.md` "Agent routing" for invocation rules.
+
+## Why Alice
+
+Agents are powerful but easy to let sprawl: ad hoc memory, inconsistent plans,
+review passes that depend on mood, and parallel workers stepping on each other.
+Alice gives them simple rails:
+
+- **Project-local by default.** Framework code is vendored in `.alice/`; runtime state stays in `.alice/mem/`.
+- **Small, repeatable SOPs.** The same docs, rules, and skill contracts work across repos.
+- **Fresh context where it matters.** Reviewers, validators, triagers, and workers run as focused sub-agents instead of bloating the main session.
+- **No stack profile theater.** Alice reads the target repo and writes the real gotchas into `CLAUDE.md` and `docs/wiki/`.
+- **Upgradeable without magic.** `/sync` shows every framework change, classifies risk, and leaves the final commit to the human.
 
 ## Scope
 
@@ -38,7 +90,9 @@ Alice is the **framework** — docs layout, planning lifecycle, ledger, the bind
 
 Stack-specific gotchas, project invariants (timestamp units, money representation, framework quirks, deploy commands), and domain knowledge all live in the adopting project's own `CLAUDE.md` and `docs/wiki/` — generated by the agent at setup time from the actual repo, not pre-baked into alice. Trying to ship every stack as a profile would either bloat alice or get stale; it's the agent's job to read the target repo and write the gotchas that match it.
 
-The skill set will grow over time as patterns prove themselves across multiple projects.
+Claude Code is the primary harness today. Alice is the portable framework that
+Claude Code reads and executes inside each repo. Other agent config directories
+can point at the same `.alice/` payload over time.
 
 ## Where alice lives in an adopting repo
 
@@ -116,10 +170,6 @@ Alice is a framework, not an app. Updates are rare and surgical. The rules:
 - **Genericize ruthlessly.** If a rule, template, or skill starts mentioning a specific framework, stack, or domain, push it back into the adopting project's CLAUDE.md or wiki. Alice stays stack-agnostic.
 - **Skill source-of-truth.** Skill SKILL.md files are the contract. The compiled `browse` daemon is a build artifact — committed for convenience, but rebuildable from `framework/skills/browse/src/`.
 - **No skill should reach into another project's git or `~/.claude/`.** Alice is per-project; its skills write only to `.alice/mem/`.
-
-## Provenance
-
-Distilled from an internal project's agent operating manual on 2026-04-20. The five binding rules, templates, `/plan` command, and skill suite were ported with all project-specific content stripped out — what's left is meant to be the universal floor that every adopting repo builds on top of. State paths and bin scripts were rebranded to `.alice/` / `alice-*`.
 
 ## References
 
