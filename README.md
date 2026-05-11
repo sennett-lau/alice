@@ -38,7 +38,6 @@ After Alice is adopted into a repo, most work starts from one of these paths.
 **Validation**
 
 - `/qa` — browser-test a feature or flow and capture evidence.
-- `/browse` — direct browser control for targeted checks.
 - `/diagnosis` — run parallel user-testing validators and promote findings into `docs/todos/findings/`.
 - `/security-audit` — focused security review.
 
@@ -48,11 +47,15 @@ After Alice is adopted into a repo, most work starts from one of these paths.
 - `/hugh` — split multiple independent features and run one isolated `/diana` per feature in parallel worktrees.
 - `/ouroboros` — resolve the findings backlog through a diagnose → resolve → evaluate → merge loop.
 
-**Utilities**
+**Operations**
 
 - `/investigate` — chase bugs, regressions, stack traces, and broken behavior to root cause.
 - `/research` — source-grounded research with citations.
 - `/pr-slicer` — split large branches into reviewable PR slices.
+
+**Utilities**
+
+- `/browse` — direct browser control for targeted checks.
 - `/setup-browser-cookies` — import real-browser auth state for browser testing.
 
 ## What alice gives you
