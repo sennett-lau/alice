@@ -9,6 +9,22 @@ loops. It is built for software work inside real repos. Alice stays stack- and
 domain-agnostic; the adopting agent fills in project-specific details from the
 actual codebase during setup.
 
+## Installation
+
+Open Claude Code (or any capable coding agent) inside the repo you want to wire up and paste this block. The agent reads the rest of the README + bootstrap guide itself.
+
+```
+Adopt the alice agentic framework into THIS repo.
+
+Clone https://github.com/sennett-lau/alice into a throwaway temp directory,
+read its README and bootstrap guide end to end, then follow the adoption flow
+they describe — vendor alice into this repo (do not leave a dependency on the
+temp clone), fill the scaffolded CLAUDE.md, and seed docs/wiki/* from what's
+actually in the repo. Never overwrite an existing CLAUDE.md or docs/ — surface
+a migration plan instead. Delete the temp clone when done and report back what
+you did.
+```
+
 ## Start here
 
 After Alice is adopted into a repo, most work starts from one of these paths.
@@ -38,25 +54,6 @@ After Alice is adopted into a repo, most work starts from one of these paths.
 - `/research` — source-grounded research with citations.
 - `/pr-slicer` — split large branches into reviewable PR slices.
 - `/setup-browser-cookies` — import real-browser auth state for browser testing.
-
-If you are installing Alice into a repo for the first time, use the quickstart
-below.
-
-## Quickstart — paste this into your agent
-
-Open Claude Code (or any capable coding agent) inside the repo you want to wire up and paste this block. The agent reads the rest of the README + bootstrap guide itself.
-
-```
-Adopt the alice agentic framework into THIS repo.
-
-Clone https://github.com/sennett-lau/alice into a throwaway temp directory,
-read its README and bootstrap guide end to end, then follow the adoption flow
-they describe — vendor alice into this repo (do not leave a dependency on the
-temp clone), fill the scaffolded CLAUDE.md, and seed docs/wiki/* from what's
-actually in the repo. Never overwrite an existing CLAUDE.md or docs/ — surface
-a migration plan instead. Delete the temp clone when done and report back what
-you did.
-```
 
 ## What alice gives you
 
