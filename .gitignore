@@ -12,3 +12,7 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Agent reference material — gitignored except the README
+references/*
+!references/README.md
