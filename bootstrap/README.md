@@ -13,24 +13,27 @@ target-repo/
   CLAUDE.md                                      (from alice/template/CLAUDE.md, only if missing)
   .gitignore                                     (.alice/mem/ appended if missing)
   .alice/                                        framework payload — vendored copy of alice/framework/
-    rules/  templates/  commands/  skills/  agents/  bin/
+    rules/  templates/  commands/  references/  skills/  agents/  bin/
   .claude/                                       Claude Code config — relative symlinks into .alice/
-    _alice    -> ../.alice                       (legacy/convenience path)
-    rules     -> ../.alice/rules
-    templates -> ../.alice/templates
-    commands  -> ../.alice/commands
+    _alice      -> ../.alice                     (legacy/convenience path)
+    rules       -> ../.alice/rules
+    templates   -> ../.alice/templates
+    commands    -> ../.alice/commands
+    references  -> ../.alice/references
     skills/
-      browse                -> ../../.alice/skills/browse
-      diana                 -> ../../.alice/skills/diana
-      hugh                  -> ../../.alice/skills/hugh
-      investigate           -> ../../.alice/skills/investigate
-      plan-eng-review       -> ../../.alice/skills/plan-eng-review
-      pr-slicer             -> ../../.alice/skills/pr-slicer
-      qa                    -> ../../.alice/skills/qa
-      research              -> ../../.alice/skills/research
-      review                -> ../../.alice/skills/review
-      security-audit        -> ../../.alice/skills/security-audit
-      setup-browser-cookies -> ../../.alice/skills/setup-browser-cookies
+      browse                      -> ../../.alice/skills/browse
+      diana                       -> ../../.alice/skills/diana
+      doubt-driven-development    -> ../../.alice/skills/doubt-driven-development
+      hugh                        -> ../../.alice/skills/hugh
+      investigate                 -> ../../.alice/skills/investigate
+      plan-eng-review             -> ../../.alice/skills/plan-eng-review
+      pr-slicer                   -> ../../.alice/skills/pr-slicer
+      qa                          -> ../../.alice/skills/qa
+      research                    -> ../../.alice/skills/research
+      review                      -> ../../.alice/skills/review
+      security-audit              -> ../../.alice/skills/security-audit
+      setup-browser-cookies       -> ../../.alice/skills/setup-browser-cookies
+      source-driven-development   -> ../../.alice/skills/source-driven-development
     agents/
       code-reviewer.md          -> ../../.alice/agents/code-reviewer.md
       pr-slicer-executor.md     -> ../../.alice/agents/pr-slicer-executor.md
@@ -91,6 +94,7 @@ Then create these **relative** symlinks (skip any that already exist — surface
 | `.claude/rules` | `../.alice/rules` |
 | `.claude/templates` | `../.alice/templates` |
 | `.claude/commands` | `../.alice/commands` |
+| `.claude/references` | `../.alice/references` |
 | `.claude/skills/<name>` for each dir under `.alice/skills/` | `../../.alice/skills/<name>` |
 | `.claude/agents/<name>.md` for each file under `.alice/agents/` | `../../.alice/agents/<name>.md` |
 
@@ -167,8 +171,8 @@ Adopters bootstrapped before `.alice/VERSION` existed get a fallback prompt in `
 ## Removing alice
 
 ```bash
-rm -rf .alice .claude/_alice .claude/{rules,templates,commands} \
-       .claude/skills/{browse,diana,hugh,investigate,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
+rm -rf .alice .claude/_alice .claude/{rules,templates,commands,references} \
+       .claude/skills/{browse,diana,doubt-driven-development,hugh,investigate,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies,source-driven-development} \
        .claude/agents
 ```
 

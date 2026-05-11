@@ -23,14 +23,16 @@ docs/                 project operating manual (wiki + plans + ledger)
   rules/                binding rules
   templates/            spec / decision / implementation / overview starters
   commands/             slash commands (e.g. /plan)
-  skills/               skill source (qa, browse, review, plan-eng-review, investigate, research, ...)
+  references/           harness-agnostic reference catalogs (orchestration patterns, ...)
+  skills/               skill source (qa, browse, review, plan-eng-review, investigate, research, doubt-driven-development, source-driven-development, ...)
   agents/               sub-agent source (code-reviewer, security-reviewer, silent-failure-hunter, refactor-cleaner, seo-specialist, wiki-maintainer)
   bin/                  alice-* helper scripts
 .claude/                Claude Code config — thin shim of symlinks into .alice/
-  _alice    -> ../.alice
-  rules     -> ../.alice/rules
-  templates -> ../.alice/templates
-  commands  -> ../.alice/commands
+  _alice      -> ../.alice
+  rules       -> ../.alice/rules
+  templates   -> ../.alice/templates
+  commands    -> ../.alice/commands
+  references  -> ../.alice/references
   skills/<name> -> ../../.alice/skills/<name>
   agents/<name> -> ../../.alice/agents/<name>
 ```
@@ -72,6 +74,7 @@ Deep architecture: `docs/wiki/architecture.md`. Domain model: `docs/wiki/domain-
 | `docs/ledger/experiences.md` | query-only | before repeating a pattern that previously burned |
 | `.claude/rules/**` | load on demand | when about to do the thing the rule governs |
 | `.claude/templates/**` | load on demand | when creating a plan folder or ledger entry |
+| `.claude/references/**` | load on demand | when a rule or skill points at the matching reference catalog |
 | `.claude/agents/**` | load on demand | when a sub-agent is invoked (see Agent routing) |
 
 Rule of thumb: auto-loaded set is small and current. Query-only set grows unbounded — pull in only when the question needs the history. The wiki splits the difference: the index always loads, the deep pages query on demand.
@@ -166,6 +169,8 @@ The project ships a small, project-local set of skills under `.alice/skills/` (s
 | Import real-browser cookies for authed QA | `setup-browser-cookies` |
 | Pre-landing PR / diff review | `review` |
 | Pre-implementation architecture review | `plan-eng-review` |
+| Adversarial fresh-context review of an in-flight non-trivial decision before it stands — distinct from `/review` (post-hoc) | `doubt-driven-development` |
+| Cite official docs before calling a framework / library / third-party API whose shape you're not 100% sure of | `source-driven-development` |
 | Security audit — secrets, dependencies, CI/CD, OWASP, LLM trust | `security-audit` |
 | Multi-source research with citations — web synthesis, competitive / market / tech scan | `research` |
 | Pull the latest alice framework into `.alice/` (sync skills, commands, agents, migrations) | `/sync` (`.alice/commands/sync.md`) |
