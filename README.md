@@ -34,22 +34,22 @@ After Alice is adopted into a repo, most work starts from one of these paths.
 - `/plan` — turn non-trivial work into a spec-backed plan folder.
 - `/plan-eng-review` — challenge a drafted plan before implementation starts.
 - `/investigate` — chase bugs, regressions, stack traces, and broken behavior to root cause.
-- `/qa` — browser-test a feature or flow and capture evidence.
 - `/review` — review a branch before landing.
 
-**Validation Loops**
+**Validation**
 
+- `/qa` — browser-test a feature or flow and capture evidence.
+- `/browse` — direct browser control for targeted checks.
 - `/diagnosis` — run parallel user-testing validators and promote findings into `docs/todos/findings/`.
-- `/ouroboros` — resolve the findings backlog through a diagnose → resolve → evaluate → merge loop.
 
 **Automation Wrappers**
 
 - `/diana` — run the full single-feature coding SOP: plan, review, implement, review, optional audit, retro, docs.
 - `/hugh` — split multiple independent features and run one isolated `/diana` per feature in parallel worktrees.
+- `/ouroboros` — resolve the findings backlog through a diagnose → resolve → evaluate → merge loop.
 
 **Utilities**
 
-- `/browse` — direct browser control for targeted checks.
 - `/security-audit` — focused security review.
 - `/research` — source-grounded research with citations.
 - `/pr-slicer` — split large branches into reviewable PR slices.
