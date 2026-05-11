@@ -36,13 +36,14 @@ If the project already runs dead-code or unused-dependency analyzers in CI, use 
   - **CAREFUL** — candidates for dynamic import / reflection / string-keyed lookup; public API surface.
   - **RISKY** — anything that might be consumed by external callers, test fixtures, tooling config, or build scripts.
 
-### 2. Verify before removing
+### 2. Verify before removing — Chesterton's Fence
 
-For every candidate:
+For every candidate, **do not remove what you don't understand**. If a fence is standing in a field and you don't know why someone built it, the answer is not to tear it down — it's to find out why it's there first. Then decide.
 
 - `grep`/`rg` for all references, **including dynamic / string-based lookups** (template strings, reflection, config files, scripts, CI).
 - Check if it's part of a public API (exported from a package entrypoint, re-exported from an `index`, mentioned in docs).
-- Skim recent git history to understand why it exists.
+- **Skim recent git history to understand why it exists.** `git log --follow <path>` and read the introducing commit's message. If the commit says "workaround for X" or "needed for Y", that's the fence's reason — find out if X/Y still apply before removing.
+- If the answer to "why does this exist" is "I don't know", the candidate is **CAREFUL**, not SAFE — escalate to a comment in your report rather than deleting silently.
 
 ### 3. Remove in small batches
 
@@ -85,6 +86,17 @@ For every candidate:
 - Right before a production deploy.
 - On code with thin or missing test coverage — you have no net.
 - On code you don't understand — hand it back, don't guess.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "Nothing references this, it's safe to delete." | Static grep misses dynamic dispatch, reflection, string-keyed lookups, config-driven loaders, CI scripts, and external consumers. Re-grep with dynamic patterns before deleting. |
+| "I don't see why this exists, so it's dead." | That's Chesterton's Fence. Read the introducing commit and any comments before removing. If "why" is unknown, downgrade to CAREFUL. |
+| "These two functions look the same — merge them." | They might do the same thing today and diverge tomorrow because the upstream contracts differ. Confirm both call sites really want one behaviour before consolidating. |
+| "I'll batch all the removals into one big PR for efficiency." | Big removal PRs make bisect useless and rollback expensive. Small batches per category are the whole point of this skill. |
+| "Tests pass, ship it." | Tests cover documented behaviour. Cleanup work also has to survive the next adopter, the build pipeline, and any downstream tool. Check those too. |
+| "It's just a reformat / rename — same diff." | Reformats and renames pollute the deletion diff and make review harder. Keep cleanup batches surgical: one category at a time. |
 
 ## Success metrics
 
