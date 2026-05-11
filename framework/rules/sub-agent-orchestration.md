@@ -68,3 +68,12 @@ Any of these in the handback → treat as a `BLOCKED:` signal even if the agent 
 Skills that dispatch sub-agents reference this rule in their orchestration section rather than re-documenting it. The skill's job is to implement the polling + escalation mechanics; this rule defines the policy the mechanics must satisfy.
 
 If a skill cannot satisfy the polling requirement for a specific agent call (e.g. the runtime doesn't expose `TaskOutput` for that agent type), the skill must dispatch that call in the foreground and block until it returns — never fire-and-forget.
+
+## Pattern catalog
+
+This rule is the policy floor — what every sub-agent dispatch must satisfy. **Which orchestration shape to use** (direct invocation, parallel fan-out, sequential pipeline, research isolation) is a separate question with its own catalog: `framework/references/orchestration-patterns.md`. Read both together when designing a new multi-agent workflow:
+
+- **This rule** = mechanics every dispatch obeys (polling, permissions, escalation).
+- **The reference catalog** = endorsed shapes (Patterns 1–5) and anti-patterns (A–D) for *how* dispatches compose.
+
+The two are independent. A new skill must satisfy the rule AND map to one of the endorsed patterns; if it can't do both, the design is wrong.

@@ -1,7 +1,7 @@
 ---
 name: review
 preamble-tier: 4
-version: 1.0.0
+version: 1.0.1
 description: |
   Pre-landing PR review. Analyzes diff against the base branch for SQL safety, LLM trust
   boundary violations, conditional side effects, and other structural issues. Use when
@@ -30,11 +30,29 @@ echo "BRANCH: ${BRANCH:-unknown}"
 
 # Pre-Landing PR Review
 
+## Overview
+
+Pre-landing diff review that checks whether the branch matches its intent and surfaces structural, safety, test, documentation, design, and silent-failure risks before merge.
+
+## When to Use
+
+- Use when asked to review a PR, code review, pre-landing review, check a diff, or assess a branch before merge.
+- Use when the user is about to land code and wants findings grounded in the branch diff.
+- Use when tests may pass but implementation quality, scope drift, or hidden behavior risks still need review.
+
+**When NOT to use:**
+
+- Do not use for pre-code architecture review; use `plan-eng-review`.
+- Do not use for active root-cause debugging; use `investigate`.
+- Do not use when there is no branch diff against the base branch.
+
+## Process
+
 You are running the `/review` workflow. Analyze the current branch's diff against the base branch for structural issues that tests don't catch.
 
 ---
 
-## Step 1: Check branch
+### Step 1: Check branch
 
 1. Run `git branch --show-current` to get the current branch.
 2. If on the base branch, output: **"Nothing to review — you're on the base branch or have no changes against it."** and stop.
@@ -42,7 +60,7 @@ You are running the `/review` workflow. Analyze the current branch's diff agains
 
 ---
 
-## Step 1.5: Scope Drift Detection
+### Step 1.5: Scope Drift Detection
 
 Before reviewing code quality, check: **did they build what was requested — nothing more, nothing less?**
 
@@ -203,7 +221,7 @@ Plan items: N DONE, M PARTIAL, K NOT DONE
 
 ---
 
-## Step 2: Read the checklist
+### Step 2: Read the checklist
 
 Read `.claude/skills/review/checklist.md`.
 
@@ -211,7 +229,7 @@ Read `.claude/skills/review/checklist.md`.
 
 ---
 
-## Step 2.5: Check for Greptile review comments
+### Step 2.5: Check for Greptile review comments
 
 Read `.claude/skills/review/greptile-triage.md` and follow the fetch, filter, classify, and **escalation detection** steps.
 
@@ -221,7 +239,7 @@ Read `.claude/skills/review/greptile-triage.md` and follow the fetch, filter, cl
 
 ---
 
-## Step 3: Get the diff
+### Step 3: Get the diff
 
 Fetch the latest base branch to avoid false positives from stale local state:
 
@@ -233,7 +251,7 @@ Run `git diff origin/<base>` to get the full diff. This includes both committed 
 
 ---
 
-## Step 4: Two-pass review
+### Step 4: Two-pass review
 
 Apply the checklist against the diff in two passes:
 
@@ -251,7 +269,7 @@ Takes seconds, prevents recommending outdated patterns. If WebSearch is unavaila
 
 Follow the output format specified in the checklist. Respect the suppressions — do NOT flag items listed in the "DO NOT flag" section.
 
-## Confidence Calibration
+### Confidence Calibration
 
 Every finding MUST include a confidence score (1-10):
 
@@ -278,9 +296,9 @@ higher confidence.
 
 ---
 
-## Step 4.5: Design Review (conditional)
+### Step 4.5: Design Review (conditional)
 
-## Design Review (conditional, diff-scoped)
+### Design Review (conditional, diff-scoped)
 
 Check if the diff touches frontend files using `alice-diff-scope`:
 
@@ -340,7 +358,7 @@ Include any design findings alongside the findings from Step 4. They follow the 
 
 ---
 
-## Step 4.75: Test Coverage Diagram
+### Step 4.75: Test Coverage Diagram
 
 100% coverage is the goal. Evaluate every codepath changed in the diff and identify test gaps. Gaps become INFORMATIONAL findings that follow the Fix-First flow.
 
@@ -533,7 +551,7 @@ This step subsumes the "Test Gaps" category from Pass 2 — do not duplicate fin
 
 ---
 
-## Step 5: Fix-First Review
+### Step 5: Fix-First Review
 
 **Every finding gets action — not just critical ones.**
 
@@ -619,7 +637,7 @@ Before replying to any comment, run the **Escalation Detection** algorithm from 
 
 ---
 
-## Step 5.5: TODOS cross-reference
+### Step 5.5: TODOS cross-reference
 
 Read `docs/todos/overview.md` (alice's live backlog, if present). Cross-reference the PR against open TODOs:
 
@@ -631,7 +649,7 @@ If docs/todos/overview.md doesn't exist, skip this step silently.
 
 ---
 
-## Step 5.6: Documentation staleness check
+### Step 5.6: Documentation staleness check
 
 Cross-reference the diff against documentation files. For each `.md` file in the repo root (README.md, ARCHITECTURE.md, CONTRIBUTING.md, CLAUDE.md, etc.):
 
@@ -645,7 +663,7 @@ If no documentation files exist, skip this step silently.
 
 ---
 
-## Step 5.7: Adversarial review (auto-scaled)
+### Step 5.7: Adversarial review (auto-scaled)
 
 Adversarial review thoroughness scales automatically based on diff size. No configuration needed.
 
@@ -779,7 +797,7 @@ High-confidence findings (agreed on by multiple sources) should be prioritized f
 
 ---
 
-## Step 5.8: Persist Diff Review result
+### Step 5.8: Persist Diff Review result
 
 After all review passes complete, persist the final `/review` outcome. The `plan-eng-review` Review Readiness Dashboard reads this to tell the user whether the branch is `CLEARED for merge`.
 
@@ -797,10 +815,45 @@ Substitute:
 - `informational` = remaining unresolved informational findings
 - `COMMIT` = output of `git rev-parse --short HEAD`
 
-## Important Rules
+### Important Rules
 
 - **Read the FULL diff before commenting.** Do not flag issues already addressed in the diff.
 - **Fix-first, not read-only.** AUTO-FIX items are applied directly. ASK items are only applied after user approval. Never commit, push, or create PRs — those are outside this skill's scope.
 - **Be terse.** One line problem, one line fix. No preamble.
 - **Only flag real problems.** Skip anything that's fine.
 - **Use Greptile reply templates from greptile-triage.md.** Every reply includes evidence. Never post vague replies.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "The diff is small, skip the two-pass review." | The two-pass exists to separate "what changed" from "what it does". Even small diffs hide subtle interactions between adjacent changes. Run both passes. |
+| "I'll flag it if I'm 60% confident." | Below 80% is noise. Either find more evidence and clear 80%, or skip the finding. Noise erodes trust in the review. |
+| "Tests pass, so the change is fine." | Tests cover the contracts the author wrote. Review covers the contracts the author *should have* written. Don't let green CI short-circuit the read. |
+| "I'll just auto-fix this ASK item — it's clearly right." | ASK is ASK. Auto-fixing user-judgement items removes the user from the loop and trains them to stop reading. |
+| "Greptile already flagged this, so the review can stop." | Greptile is one signal. Cross-reference Greptile findings against your own pass; sometimes Greptile is wrong, sometimes it's right but the user already accepted the trade-off. Triage, don't defer. |
+| "The adversarial pass adds tokens for no real value on small diffs." | The skill auto-scales the adversarial pass to diff size for exactly this reason. Don't bypass the scaling logic — let it skip itself when the diff genuinely doesn't warrant it. |
+
+## Red Flags
+
+- A finding posted with "this looks wrong" but no concrete fix or evidence.
+- AUTO-FIX applied without a build/test re-run.
+- ASK items applied without recording the user's response.
+- Coverage warning suppressed without justification.
+- A PR review that omits the test coverage diagram for a behaviour change.
+- Scope drift items detected but not surfaced in the review output.
+- Verification of claims step skipped on a diff that adds an assertion ("this is thread-safe", "this is idempotent").
+- Greptile comment "resolved" with no posted reply.
+
+## Verification
+
+A review is complete when:
+
+- [ ] Both review passes (read-for-change, read-for-behaviour) ran on the full diff.
+- [ ] Findings classified as AUTO-FIX / ASK / SKIP per the fix-first contract.
+- [ ] All AUTO-FIX items applied and tests/build re-run green.
+- [ ] All ASK items batched into a single user prompt; user response recorded.
+- [ ] Test coverage diagram emitted for any behaviour change.
+- [ ] Adversarial pass ran at the tier corresponding to the diff size (or was deliberately skipped per Step 5.7's scaling).
+- [ ] Diff Review result persisted to `.alice/mem/reviews/`.
+- [ ] No commit, push, or PR action was taken — all hand-off is to the user.

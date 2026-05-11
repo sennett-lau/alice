@@ -1,7 +1,7 @@
 ---
 name: diana
 preamble-tier: 4
-version: 1.3.0
+version: 1.3.1
 description: |
   Run the alice SOP end-to-end for a given feature description with little
   or no human interaction. Two modes (`fully-auto` default, `murmur` for
@@ -35,13 +35,33 @@ echo "BRANCH: $(git branch --show-current)"
 echo "RUN_TS: $RUN_TS"
 ```
 
+# Diana End-to-End SOP Runner
+
+## Overview
+
+Runs the alice SOP end-to-end for one feature: plan, plan review, implementation, review, optional slicing/security, retrospective, documentation update, and child-agent drain.
+
+## When to Use
+
+- Use when asked to run `diana`, run the full SOP, auto-implement a feature, or ship a feature end-to-end.
+- Use when the user wants a bounded autonomous workflow with audit logs under `.alice/mem/diana/`.
+- Use when the work is one coherent feature rather than several independent features.
+
+**When NOT to use:**
+
+- Do not use for multiple independent features that should run concurrently; use `hugh`.
+- Do not use for one-off review, debugging, QA, or research tasks where a narrower skill applies.
+- Do not bypass user confirmation for irreversible operations or permission escalation points.
+
+## Process
+
 Run state lives at `<repo>/.alice/mem/diana/<run-slug>/`. Gitignored. Every autonomous decision is logged so the user can audit what diana did without re-running the session. The same state dir powers `--resume` after an interrupted run (network drop, token limit, crash) — see the "Resume" and "State & audit trail" sections.
 
 **Load the orchestration rule.** Every sub-agent dispatch in this skill must follow `.alice/rules/sub-agent-orchestration.md` — progress polling (≥1/min) and permission escalation. Diana fans out several sub-agents per run; without polling, a single stuck agent stalls the whole pipeline silently.
 
 ---
 
-## Arguments (`$ARGUMENTS`)
+### Arguments (`$ARGUMENTS`)
 
 ```
 /diana [<feature-description>] [--mode=fully-auto|murmur] [--effort=low|medium|high|max]
@@ -85,7 +105,7 @@ If `$ARGUMENTS` is empty AND no runs exist under `.alice/mem/diana/`: print the 
 
 ---
 
-## Modes
+### Modes
 
 The two modes differ ONLY in when diana is allowed to call `AskUserQuestion`:
 
@@ -120,7 +140,7 @@ To prevent murmur turning into a constant-prompt run, diana still applies the De
 
 ---
 
-## Effort tiers
+### Effort tiers
 
 | Step | low | medium (default) | high | max |
 |------|-----|------------------|------|-----|
@@ -163,7 +183,7 @@ Otherwise skip slicing — the PR is small enough to review whole. Record the de
 
 ---
 
-## Resume
+### Resume
 
 Runs can die mid-pipeline — network drop, token-limit truncation, crash, user interrupt. The `.alice/mem/diana/<run-slug>/` dir is the resume source of truth.
 
@@ -230,7 +250,7 @@ Useful when:
 
 ---
 
-## The pipeline
+### The pipeline
 
 All steps run under a common run slug. For a new run:
 
@@ -566,7 +586,7 @@ This lets Step 9 enumerate cheaply without scanning JSONL. Steps that skip the c
 
 ---
 
-## Decision policy
+### Decision policy
 
 Ordered principles diana applies when the chained skills prompt for input. Applies to BOTH modes — in fully-auto these resolve every decision silently; in murmur diana may interactively confirm an irreversible-class decision instead of auto-applying.
 
@@ -599,7 +619,7 @@ Database schema choices, external API contracts, destructive operations, authent
 
 ---
 
-## Failure handling
+### Failure handling
 
 Retry limits per step:
 - Build / test failure during implementation (Step 3): 3 attempts per step, fix + re-run each time.
@@ -639,7 +659,7 @@ In murmur, escalation pauses and prompts:
 
 ---
 
-## State & audit trail
+### State & audit trail
 
 `.alice/mem/diana/<run-slug>/` layout after a complete run:
 
@@ -727,7 +747,7 @@ One line per step — no prose, no filler. On resume, diana prints the resume ba
 
 ---
 
-## Hard rules
+### Hard rules
 
 - **Diana is an orchestrator, not a freelancer.** She invokes alice's existing skills (`/plan`, `/plan-eng-review`, `/review`, `/pr-slicer`, `/security-audit`) and follows alice's binding rules. She does not bypass them even in `low` effort — she only skips *adversarial* steps, never the SOP steps themselves (retro + doc update always run).
 - **Never push, create PRs, or deploy autonomously.** Diana stops at "staged locally." Remote side-effects are the user's to authorize per-run.
@@ -742,3 +762,38 @@ One line per step — no prose, no filler. On resume, diana prints the resume ba
 - **Retro + doc update are binding.** Skipping them would violate `post-feature-retro.md` and `documentation-updates.md`. Every effort tier runs both.
 - **Drain is binding.** Step 9 always runs and is the only step permitted to print the final "diana run complete" summary. No other step prints success. Until drain confirms every spawned sub-agent and background shell is in a terminal state, the run is not done — even if every other step is `.done`. This protects against upstream Claude Code bugs where main reports done while spawned agents keep running, which corrupts `--resume` later. If drain fails, diana writes `DRAIN-FAILED.md` and hands back without `/exit`-ing.
 - **Sub-agent capture is binding.** Any step that dispatches an `Agent` or starts a `Bash(run_in_background: true)` MUST record the returned ID in its transcript under the `## Spawned agents` / `## Background shells` subheadings. Step 9's enumeration depends on it. Skipping the capture forces lossy fallback (grep) and is logged as a contract violation.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "Fully-auto can ask just this once — it's an important decision." | No mid-SOP `AskUserQuestion` in fully-auto, period. Write BLOCKED.md, mark the step failed, hand back. The user resumes manually. One exception unravels the safety contract. |
+| "Skipping the retro because the change was small." | Retro + doc update are binding at every effort tier. Small changes still drift wikis and accumulate undocumented decisions. |
+| "I'll inline this work instead of dispatching `/plan-eng-review` — saves tokens." | Diana is an orchestrator. Inlining a skill defeats the rule of "use alice's existing skills". Dispatch the skill; the orchestration overhead is the safety budget. |
+| "The build is red but the diff looks fine — proceed to review." | Build green is a non-negotiable from `implementation-quality.md`. Diana stops, marks the step failed, writes BLOCKED.md. |
+| "Step marker is missing but I know the step ran — write the `.done` anyway." | Faking step markers strands future `--resume` runs and corrupts the audit trail. Mark `.failed`, document, hand back. |
+| "Drain is just cleanup — skip if all steps are done." | Drain confirms every spawned sub-agent and background shell is terminated. Until drain confirms, the run isn't done — even if every step says it is. Upstream bugs make this load-bearing. |
+| "Murmur should batch the questions, then auto-decide the rest." | Murmur's contract is "intake batch + permitted mid-SOP asks". Auto-deciding mid-SOP defeats the mode's whole purpose. |
+
+## Red Flags
+
+- Diana invoking `AskUserQuestion` mid-SOP in `fully-auto` mode.
+- A step marked `.done` without the corresponding transcript section under the run dir.
+- Spawned agents that don't appear in any `## Spawned agents` capture block.
+- A run that prints "diana run complete" from a step other than Step 9 (Drain).
+- A feature branch left uncreated when the user wasn't on the repo's default branch.
+- Decisions made autonomously that never landed in `decisions.md`.
+- Effort tier silently downgraded mid-run because "the change turned out smaller than expected".
+- Working tree left dirty after Step 9 without an explicit handback note.
+
+## Verification
+
+A diana run is DONE only when:
+
+- [ ] All steps from 1 to 9 have a `.done` marker under the run dir.
+- [ ] Step 9 (Drain) printed the final "diana run complete" summary; no other step did.
+- [ ] Every spawned agent and background shell has a terminal state recorded.
+- [ ] Retro (`post-feature-retro.md`) and doc update (`documentation-updates.md`) ran regardless of effort tier.
+- [ ] No remote side-effects (`git push`, `gh pr create`, deploy) occurred — diana stops at staged-locally.
+- [ ] `run.conf` is intact and the run can be re-listed via `--list-runs`.
+- [ ] If the run aborted to BLOCKED.md, the file is present and identifies the failing step and the trigger.

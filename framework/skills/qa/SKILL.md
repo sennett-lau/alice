@@ -1,7 +1,7 @@
 ---
 name: qa
 preamble-tier: 4
-version: 2.0.0
+version: 2.0.1
 description: |
   Systematically QA test a web application and fix bugs found. Runs QA testing,
   then iteratively fixes bugs in source code, committing each fix atomically and
@@ -33,9 +33,27 @@ echo "BRANCH: ${BRANCH:-unknown}"
 
 # /qa: Test → Fix → Verify
 
+## Overview
+
+End-to-end web QA workflow that tests like a real user, triages findings, optionally fixes bugs atomically, re-verifies, and produces evidence-backed reports.
+
+## When to Use
+
+- Use when asked to QA, test a site, dogfood a feature, find bugs, test and fix, or verify that a feature works.
+- Use when a web-facing feature is ready for browser validation and evidence collection.
+- Use when report-only QA or diff-aware branch QA is needed.
+
+**When NOT to use:**
+
+- Do not use for raw browser commands only; use `browse`.
+- Do not use for non-web unit-level verification unless browser behavior is part of the claim.
+- Do not enter the fix loop when the user requested report-only mode.
+
+## Process
+
 You are a QA engineer AND a bug-fix engineer. Test web applications like a real user — click everything, fill every form, check every state. When you find bugs, fix them in source code with atomic commits, then re-verify. Produce a structured report with before/after evidence.
 
-## Setup
+### Setup
 
 **Parse the user's request for these parameters:**
 
@@ -81,7 +99,7 @@ After the user chooses, execute their choice (commit or stash), then continue wi
 
 **Find the browse binary:**
 
-## SETUP (run this check BEFORE any browse command)
+### SETUP (run this check BEFORE any browse command)
 
 ```bash
 _ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
@@ -139,7 +157,7 @@ mkdir -p .alice/mem/qa-reports/screenshots
 
 ---
 
-## Test Plan Context
+### Test Plan Context
 
 Before falling back to git diff heuristics, check for richer test plan sources:
 
@@ -154,9 +172,9 @@ Before falling back to git diff heuristics, check for richer test plan sources:
 
 ---
 
-## Phases 1-6: QA Baseline
+### Phases 1-6: QA Baseline
 
-## Modes
+### Modes
 
 ### Diff-aware (automatic when on a feature branch with no URL)
 
@@ -215,7 +233,7 @@ Run full mode, then load `baseline.json` from a previous run. Diff: which issues
 
 ---
 
-## Workflow
+### Workflow
 
 ### Phase 1: Initialize
 
@@ -352,7 +370,7 @@ $B snapshot -i -a -o "$REPORT_DIR/screenshots/issue-002.png"
 
 ---
 
-## Health Score Rubric
+### Health Score Rubric
 
 Compute each category score (0-100), then take the weighted average.
 
@@ -391,7 +409,7 @@ Minimum 0 per category.
 
 ---
 
-## Framework-Specific Guidance
+### Framework-Specific Guidance
 
 ### Next.js
 - Check console for hydration errors (`Hydration failed`, `Text content did not match`)
@@ -419,7 +437,7 @@ Minimum 0 per category.
 
 ---
 
-## Important Rules
+### Important Rules
 
 1. **Repro is everything.** Every issue needs at least one screenshot. No exceptions.
 2. **Verify before documenting.** Retry the issue once to confirm it's reproducible, not a fluke.
@@ -438,7 +456,7 @@ Record baseline health score at end of Phase 6.
 
 ---
 
-## Output Structure
+### Output Structure
 
 ```
 .alice/mem/qa-reports/
@@ -457,7 +475,7 @@ Report filenames use the domain and date: `qa-report-myapp-com-2026-03-12.md`
 
 ---
 
-## Phase 7: Triage
+### Phase 7: Triage
 
 Sort all discovered issues by severity, then decide which to fix based on the selected tier:
 
@@ -469,7 +487,7 @@ Mark issues that cannot be fixed from source code (e.g., third-party widget bugs
 
 ---
 
-## Phase 8: Fix Loop
+### Phase 8: Fix Loop
 
 For each fixable issue, in severity order:
 
@@ -592,7 +610,7 @@ WTF-LIKELIHOOD:
 
 ---
 
-## Phase 9: Final QA
+### Phase 9: Final QA
 
 After all fixes are applied:
 
@@ -602,7 +620,7 @@ After all fixes are applied:
 
 ---
 
-## Phase 10: Report
+### Phase 10: Report
 
 Write the report to both local and project-scoped locations:
 
@@ -631,7 +649,7 @@ Write to `.alice/mem/projects/{slug}/{user}-{branch}-test-outcome-{datetime}.md`
 
 ---
 
-## Phase 11: TODOs update
+### Phase 11: TODOs update
 
 If the repo has `docs/todos/overview.md` (alice's live backlog), keep it honest about what changed during this QA pass.
 
@@ -650,10 +668,44 @@ The overview holds the pointers; the per-TODO file holds the context. Long conte
 
 ---
 
-## Additional Rules (qa-specific)
+### Additional Rules (qa-specific)
 
 11. **Clean working tree required.** If dirty, use AskUserQuestion to offer commit/stash/abort before proceeding.
 12. **One commit per fix.** Never bundle multiple fixes into one commit.
 13. **Only modify tests when generating regression tests in Phase 8e.5.** Never modify CI configuration. Never modify existing tests — only create new test files.
 14. **Revert on regression.** If a fix makes things worse, `git revert HEAD` immediately.
 15. **Self-regulate.** Follow the WTF-likelihood heuristic. When in doubt, stop and ask.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "The site looks fine in the screenshots." | Screenshots show one viewport at one moment. Test all the tiers (critical/high/medium/cosmetic), check console, check network, check actual interactions. |
+| "I'll bundle these two related fixes into one commit for cleanliness." | One commit per fix is the bisect contract. Bundling makes revert-on-regression destroy unrelated work. |
+| "The before/after diff is good enough without health scores." | Health scores are the load-bearing metric. Without them, "before vs after" is unfalsifiable. |
+| "I can modify the existing test instead of writing a new one." | Modifying existing tests during /qa is forbidden — you change the contract the test was holding. Only Phase 8e.5 may add new test files. |
+| "The bug is cosmetic, skipping the TODO entry." | Cosmetic in this pass might be P1 next pass. Every deferred bug becomes a TODO with full context so the next agent doesn't re-investigate from scratch. |
+| "Working tree is dirty but my changes are unrelated to QA." | /qa assumes a clean tree so the diff after the run is unambiguous. Commit or stash first; mixing makes regression-tracing impossible. |
+
+## Red Flags
+
+- A health score reported without before/after evidence.
+- Multiple fixes squashed into one commit.
+- A CI config or existing test modified during the run.
+- A regression introduced by a fix and not reverted immediately.
+- Deferred bugs without a corresponding `docs/todos/<slug>.md` and overview entry.
+- The run claimed success without a final "ship readiness" summary.
+- Sensitive data (cookies, tokens, user PII) leaked into screenshots or the report.
+
+## Verification
+
+A /qa run is DONE when:
+
+- [ ] Working tree was clean at start (or the user explicitly chose stash/commit).
+- [ ] Health scores were captured before and after, with the before/after delta in the report.
+- [ ] Every fix landed as its own atomic commit on the working branch.
+- [ ] No CI config or existing test file was modified.
+- [ ] Deferred bugs each have a `docs/todos/<slug>.md` + overview entry.
+- [ ] Fixed bugs that were existing TODOs got their detail file deleted and a Done-recent line in overview.
+- [ ] Final summary block (ship-readiness verdict + remaining risks) was emitted.
+- [ ] If `--report-only`, no fix commits exist.
