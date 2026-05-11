@@ -742,3 +742,38 @@ One line per step — no prose, no filler. On resume, diana prints the resume ba
 - **Retro + doc update are binding.** Skipping them would violate `post-feature-retro.md` and `documentation-updates.md`. Every effort tier runs both.
 - **Drain is binding.** Step 9 always runs and is the only step permitted to print the final "diana run complete" summary. No other step prints success. Until drain confirms every spawned sub-agent and background shell is in a terminal state, the run is not done — even if every other step is `.done`. This protects against upstream Claude Code bugs where main reports done while spawned agents keep running, which corrupts `--resume` later. If drain fails, diana writes `DRAIN-FAILED.md` and hands back without `/exit`-ing.
 - **Sub-agent capture is binding.** Any step that dispatches an `Agent` or starts a `Bash(run_in_background: true)` MUST record the returned ID in its transcript under the `## Spawned agents` / `## Background shells` subheadings. Step 9's enumeration depends on it. Skipping the capture forces lossy fallback (grep) and is logged as a contract violation.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "Fully-auto can ask just this once — it's an important decision." | No mid-SOP `AskUserQuestion` in fully-auto, period. Write BLOCKED.md, mark the step failed, hand back. The user resumes manually. One exception unravels the safety contract. |
+| "Skipping the retro because the change was small." | Retro + doc update are binding at every effort tier. Small changes still drift wikis and accumulate undocumented decisions. |
+| "I'll inline this work instead of dispatching `/plan-eng-review` — saves tokens." | Diana is an orchestrator. Inlining a skill defeats the rule of "use alice's existing skills". Dispatch the skill; the orchestration overhead is the safety budget. |
+| "The build is red but the diff looks fine — proceed to review." | Build green is a non-negotiable from `implementation-quality.md`. Diana stops, marks the step failed, writes BLOCKED.md. |
+| "Step marker is missing but I know the step ran — write the `.done` anyway." | Faking step markers strands future `--resume` runs and corrupts the audit trail. Mark `.failed`, document, hand back. |
+| "Drain is just cleanup — skip if all steps are done." | Drain confirms every spawned sub-agent and background shell is terminated. Until drain confirms, the run isn't done — even if every step says it is. Upstream bugs make this load-bearing. |
+| "Murmur should batch the questions, then auto-decide the rest." | Murmur's contract is "intake batch + permitted mid-SOP asks". Auto-deciding mid-SOP defeats the mode's whole purpose. |
+
+## Red Flags
+
+- Diana invoking `AskUserQuestion` mid-SOP in `fully-auto` mode.
+- A step marked `.done` without the corresponding transcript section under the run dir.
+- Spawned agents that don't appear in any `## Spawned agents` capture block.
+- A run that prints "diana run complete" from a step other than Step 9 (Drain).
+- A feature branch left uncreated when the user wasn't on the repo's default branch.
+- Decisions made autonomously that never landed in `decisions.md`.
+- Effort tier silently downgraded mid-run because "the change turned out smaller than expected".
+- Working tree left dirty after Step 9 without an explicit handback note.
+
+## Verification
+
+A diana run is DONE only when:
+
+- [ ] All steps from 1 to 9 have a `.done` marker under the run dir.
+- [ ] Step 9 (Drain) printed the final "diana run complete" summary; no other step did.
+- [ ] Every spawned agent and background shell has a terminal state recorded.
+- [ ] Retro (`post-feature-retro.md`) and doc update (`documentation-updates.md`) ran regardless of effort tier.
+- [ ] No remote side-effects (`git push`, `gh pr create`, deploy) occurred — diana stops at staged-locally.
+- [ ] `run.conf` is intact and the run can be re-listed via `--list-runs`.
+- [ ] If the run aborted to BLOCKED.md, the file is present and identifies the failing step and the trigger.

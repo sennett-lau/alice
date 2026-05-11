@@ -521,3 +521,36 @@ If `followups.md` is empty: skip entirely.
 - **Remote side-effects** (`git push`, `gh pr create`, `gh pr edit`, merge) are main-session only. Executors never touch them — the executor agent's `tools:` frontmatter should not include `gh` access.
 - **Worktree cleanup:** `git worktree remove` only after the branch is pushed and the slice is landed (or explicitly abandoned).
 - **Orchestration rule is binding.** If you can't poll a background agent at ≤1/min, dispatch foreground instead. Do not fire-and-forget.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "These two slices touch adjacent files — bundle them." | Bundling defeats the slice gate. Reviewers can't apply per-slice judgement when slices merge. Keep them separate; let the dependency graph order them. |
+| "Migration files are small, push them with the first feature slice." | Migration files are migration-class for a reason — they need focused review and they cause rebase pain. Migration PR always lands first, alone. |
+| "Executor failed to push — I'll do it from the main session." | Executors never push; main session pushes. That's the contract. If the executor "needs" to push, the executor's instructions are wrong. |
+| "The follow-up findings inbox is empty most of the time — skip Step 9." | Empty means skip; only-skip-when-empty. Routinely skipping with non-empty `followups.md` strands deferred review findings forever. |
+| "Polling background executors every 60s is too noisy." | The cadence is in `sub-agent-orchestration.md` for a reason — silent stalls cost hours. If it feels noisy, the run is short enough to dispatch foreground. |
+| "Worktree cleanup can wait until tomorrow." | Stale worktrees confuse the next pr-slicer run and the user's git state. Clean up as soon as the slice is landed or abandoned. |
+
+## Red Flags
+
+- A slice PR that includes both code changes and migration changes.
+- Executor agent frontmatter that includes `gh` or any push-capable tool.
+- Background executors dispatched without an attached polling loop.
+- A `.done` step marker without the corresponding PR URL captured.
+- Follow-up findings landing in `docs/todos/overview.md` without the matching slice metadata.
+- A slice PR landing before its declared dependencies.
+- Worktrees still on disk for slices that already merged.
+
+## Verification
+
+A pr-slicer run is DONE when:
+
+- [ ] Source branch was clean at start (no uncommitted changes).
+- [ ] Migration PR (if any) landed first; all dependent slices rebased on it.
+- [ ] Each slice has its own branch, its own PR URL captured in run state, and its own review gate satisfied.
+- [ ] No executor pushed or created a PR — all remote actions traced to the main session.
+- [ ] `followups.md` either landed as a Step-9 PR or is empty.
+- [ ] All worktrees corresponding to landed slices are removed.
+- [ ] Run state under `.alice/mem/pr-slicer/<run>/` is complete enough to audit which slice produced which PR.

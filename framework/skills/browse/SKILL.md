@@ -304,3 +304,34 @@ Refs are invalidated on navigation — run `snapshot` again after `goto`.
 | `state save|load <name>` | Save/load browser state (cookies + URLs) |
 | `status` | Health check |
 | `stop` | Shutdown server |
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "The page rendered something, so it works." | "Rendered" ≠ "correct". Check console for errors, network for failed requests, and the actual DOM for the elements the feature claims to produce. |
+| "I'll skip the snapshot and just look at the screenshot." | Screenshots show pixels; snapshots show interactive structure. Click targets, form fields, and ARIA hooks live in the snapshot, not the image. Use both. |
+| "Re-running browse to inspect would burn tool calls." | Each browse call is ~100ms warm. Re-checking after an action is cheap; assuming the action worked is expensive when it didn't. |
+| "The login worked in browse, so the user's flow works." | The headless session can have a different cookie/session shape than the user's real browser. For auth-sensitive bug repros, use `setup-browser-cookies` to mirror the real session. |
+| "Diffing snapshots is overkill for this small interaction." | The diff catches what you didn't notice changed (a hidden modal appeared, a CSP warning fired, a network call regressed). Default to `-D` after every meaningful action. |
+
+## Red Flags
+
+- Reporting "feature works" without console + network checks.
+- Skipping the SETUP block and assuming the binary is present.
+- Running browse against production without explicit user permission for destructive actions.
+- Asserting visibility on an element ref captured from a stale snapshot (refs invalidate on re-render).
+- Closing or restarting the server mid-session without preserving in-flight state.
+- Pasting cookie values or session tokens into chat output.
+
+## Verification
+
+After a browse-driven check:
+
+- [ ] SETUP returned `READY:` (binary present, build not needed mid-run).
+- [ ] Console was inspected — no unexpected errors.
+- [ ] Network was inspected — no failed requests on the page under test.
+- [ ] Key elements verified visible (`is visible "<selector>"`).
+- [ ] If an action was taken, a `snapshot -D` diff was produced against the pre-action snapshot.
+- [ ] Screenshots saved for any user-visible report are referenced by file path in the output.
+- [ ] Session state (cookies, tabs) is left in a clean state for the next caller, or deliberately preserved with a note saying why.

@@ -804,3 +804,38 @@ Substitute:
 - **Be terse.** One line problem, one line fix. No preamble.
 - **Only flag real problems.** Skip anything that's fine.
 - **Use Greptile reply templates from greptile-triage.md.** Every reply includes evidence. Never post vague replies.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "The diff is small, skip the two-pass review." | The two-pass exists to separate "what changed" from "what it does". Even small diffs hide subtle interactions between adjacent changes. Run both passes. |
+| "I'll flag it if I'm 60% confident." | Below 80% is noise. Either find more evidence and clear 80%, or skip the finding. Noise erodes trust in the review. |
+| "Tests pass, so the change is fine." | Tests cover the contracts the author wrote. Review covers the contracts the author *should have* written. Don't let green CI short-circuit the read. |
+| "I'll just auto-fix this ASK item — it's clearly right." | ASK is ASK. Auto-fixing user-judgement items removes the user from the loop and trains them to stop reading. |
+| "Greptile already flagged this, so the review can stop." | Greptile is one signal. Cross-reference Greptile findings against your own pass; sometimes Greptile is wrong, sometimes it's right but the user already accepted the trade-off. Triage, don't defer. |
+| "The adversarial pass adds tokens for no real value on small diffs." | The skill auto-scales the adversarial pass to diff size for exactly this reason. Don't bypass the scaling logic — let it skip itself when the diff genuinely doesn't warrant it. |
+
+## Red Flags
+
+- A finding posted with "this looks wrong" but no concrete fix or evidence.
+- AUTO-FIX applied without a build/test re-run.
+- ASK items applied without recording the user's response.
+- Coverage warning suppressed without justification.
+- A PR review that omits the test coverage diagram for a behaviour change.
+- Scope drift items detected but not surfaced in the review output.
+- Verification of claims step skipped on a diff that adds an assertion ("this is thread-safe", "this is idempotent").
+- Greptile comment "resolved" with no posted reply.
+
+## Verification
+
+A review is complete when:
+
+- [ ] Both review passes (read-for-change, read-for-behaviour) ran on the full diff.
+- [ ] Findings classified as AUTO-FIX / ASK / SKIP per the fix-first contract.
+- [ ] All AUTO-FIX items applied and tests/build re-run green.
+- [ ] All ASK items batched into a single user prompt; user response recorded.
+- [ ] Test coverage diagram emitted for any behaviour change.
+- [ ] Adversarial pass ran at the tier corresponding to the diff size (or was deliberately skipped per Step 5.7's scaling).
+- [ ] Diff Review result persisted to `.alice/mem/reviews/`.
+- [ ] No commit, push, or PR action was taken — all hand-off is to the user.

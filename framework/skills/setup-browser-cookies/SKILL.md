@@ -109,3 +109,27 @@ Show the user a summary of imported cookies (domain counts).
 - Cookie picker is served on the same port as the browse server (no extra process)
 - Only domain names and cookie counts are shown in the UI — no cookie values are exposed
 - The browse session persists cookies between commands, so imported cookies work immediately
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "I'll just hardcode the test password into the test." | Real-browser cookies cover SSO, MFA-bypass-via-trust, OAuth callbacks, and session-server quirks that test-credential paths skip. Import once, get the realistic state. |
+| "The user is already logged in CDP mode — let me run the picker anyway." | The CDP check exists for a reason. Re-running the picker over CDP can clobber the live session. Honour the early return. |
+| "It's fine to log cookie values for debugging." | Cookie values are credentials. Never log them, never paste them into chat, never write them to the report. Domain + count is the only safe surface. |
+
+## Red Flags
+
+- Skipping the CDP mode check and running the picker against a live session.
+- Pasting cookie values into chat or any log.
+- Importing domains the user didn't ask for ("just in case").
+- Running the picker on a binary that's not the project-local `.alice/skills/browse/dist/browse` (could be a stale or different build).
+
+## Verification
+
+After the user confirms cookie selection:
+
+- [ ] `$B cookies` shows non-zero counts for the domains the user asked for.
+- [ ] No cookie values appeared in any output — only domains and counts.
+- [ ] CDP-mode check ran first and returned `false` (or, if `true`, the skill stopped early).
+- [ ] If on macOS, the Keychain dialog was acknowledged by the user (not auto-clicked).

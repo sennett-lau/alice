@@ -657,3 +657,37 @@ The overview holds the pointers; the per-TODO file holds the context. Long conte
 13. **Only modify tests when generating regression tests in Phase 8e.5.** Never modify CI configuration. Never modify existing tests — only create new test files.
 14. **Revert on regression.** If a fix makes things worse, `git revert HEAD` immediately.
 15. **Self-regulate.** Follow the WTF-likelihood heuristic. When in doubt, stop and ask.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "The site looks fine in the screenshots." | Screenshots show one viewport at one moment. Test all the tiers (critical/high/medium/cosmetic), check console, check network, check actual interactions. |
+| "I'll bundle these two related fixes into one commit for cleanliness." | One commit per fix is the bisect contract. Bundling makes revert-on-regression destroy unrelated work. |
+| "The before/after diff is good enough without health scores." | Health scores are the load-bearing metric. Without them, "before vs after" is unfalsifiable. |
+| "I can modify the existing test instead of writing a new one." | Modifying existing tests during /qa is forbidden — you change the contract the test was holding. Only Phase 8e.5 may add new test files. |
+| "The bug is cosmetic, skipping the TODO entry." | Cosmetic in this pass might be P1 next pass. Every deferred bug becomes a TODO with full context so the next agent doesn't re-investigate from scratch. |
+| "Working tree is dirty but my changes are unrelated to QA." | /qa assumes a clean tree so the diff after the run is unambiguous. Commit or stash first; mixing makes regression-tracing impossible. |
+
+## Red Flags
+
+- A health score reported without before/after evidence.
+- Multiple fixes squashed into one commit.
+- A CI config or existing test modified during the run.
+- A regression introduced by a fix and not reverted immediately.
+- Deferred bugs without a corresponding `docs/todos/<slug>.md` and overview entry.
+- The run claimed success without a final "ship readiness" summary.
+- Sensitive data (cookies, tokens, user PII) leaked into screenshots or the report.
+
+## Verification
+
+A /qa run is DONE when:
+
+- [ ] Working tree was clean at start (or the user explicitly chose stash/commit).
+- [ ] Health scores were captured before and after, with the before/after delta in the report.
+- [ ] Every fix landed as its own atomic commit on the working branch.
+- [ ] No CI config or existing test file was modified.
+- [ ] Deferred bugs each have a `docs/todos/<slug>.md` + overview entry.
+- [ ] Fixed bugs that were existing TODOs got their detail file deleted and a Done-recent line in overview.
+- [ ] Final summary block (ship-readiness verdict + remaining risks) was emitted.
+- [ ] If `--report-only`, no fix commits exist.

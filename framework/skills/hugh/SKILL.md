@@ -544,3 +544,37 @@ Everything under `.alice/mem/` is gitignored — including the worktrees, even t
 - **Sub-agent capture is binding.** Same contract diana uses. Skipping the capture forces lossy fallback (grep) and is logged as a contract violation.
 - **`--max-parallel` is a throttle, not a guarantee.** If the runtime backpressures or tooling rate-limits, fewer than `--max-parallel` may run concurrently. The skill should not assume any specific concurrency level — features queue and run as slots free.
 - **Hugh inherits diana's "no mixed-mode siblings" stance.** A single hugh run uses one mode and one effort across all features. Mixing requires two `/hugh` invocations.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "These two features overlap — let me share a worktree to save disk." | Shared worktree = race on `node_modules`, lockfiles, and config files. Each diana gets its own worktree, full stop. |
+| "Skipping port allocation since the adopter doesn't run a dev server." | The adopter's CLAUDE.md was silent at run time, not forever. Always allocate from the default pool — silent-now is not silent-later. |
+| "The inbox is empty, drain is trivial." | Drain isn't about messages — it's about confirming every sub-agent terminated. Skip drain and you orphan processes. |
+| "One diana is hung but the others are fine — let it ride." | Poll every minute. Three silent polls = surface to user via the `sub-agent-orchestration` rule. Silent stalls compound into lost runs. |
+| "Sub-agent capture failed — grep fallback is fine." | Lossy. Log the contract violation, surface the gap to the user, and prefer to rerun the affected feature rather than ship a half-captured handback. |
+| "I'll let one feature push while the others stage." | Hugh stops at "staged locally per worktree." No exceptions. The user owns push / PR / deploy. |
+| "Resuming partial features takes too long — restart all." | `--resume-feature` exists for a reason. Restart only the features that genuinely need it; resume the rest from their last `.done` marker. |
+
+## Red Flags
+
+- Hugh editing files outside `<repo>/.alice/mem/`.
+- Two dianas writing to overlapping worktrees or sharing a port.
+- A `.done` marker present but the corresponding step's output missing.
+- Cross-feature notes routed between dianas without hugh as the middleman.
+- A run that "completes" without Step 7 (drain) firing.
+- A single hugh run mixing effort tiers or modes across features.
+- Sub-agent dispatch with no polling loop attached (violates `sub-agent-orchestration.md`).
+
+## Verification
+
+A hugh run is DONE only when:
+
+- [ ] Every feature's per-feature handback section is filled under the run dir.
+- [ ] Every spawned diana has a `done` or `failed` status; no `unknown`.
+- [ ] Step 7 (drain) emitted the "hugh run complete" summary; no orphaned sub-agents reported.
+- [ ] Cross-feature retro section is written, even if the conclusion is "no significant cross-feature signals".
+- [ ] Each worktree is left staged (not pushed) and the user has the list of branches plus the suggested next action.
+- [ ] No file outside `<repo>/.alice/mem/` was written by hugh itself (each diana wrote inside its own worktree).
+- [ ] `--list-runs` shows the run with an updated terminal timestamp.

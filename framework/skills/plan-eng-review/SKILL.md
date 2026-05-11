@@ -732,3 +732,33 @@ After the dashboard:
 
 ## Unresolved decisions
 If the user does not respond to an AskUserQuestion or interrupts to move on, note which decisions were left unresolved. At the end of the review, list these as "Unresolved decisions that may bite you later" — never silently default to an option.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "The spec is short, skip plan-eng-review and go straight to code." | Short specs hide implicit assumptions exactly because they're short. The review is what surfaces them while course-correction is cheap. |
+| "I'll silently default the unresolved decisions to whatever is easiest." | Silent defaults become bugs in production that read like surprises. Always surface unresolved decisions in the review report. |
+| "The dashboard is a chore — the user already knows the verdict." | The dashboard exists for the next agent reading the plan, not the current user. Without it, the plan loses its review state. |
+| "Findings from a single reviewer are enough; cross-model is overkill." | Adversarial fan-out at the appropriate tier exists because single-reviewer blind spots are real. Trust the tier scaling — don't downgrade by hand. |
+| "The plan file already mentions this concern in a comment — no need to flag it." | If the concern lives in a freeform comment rather than a structured decision, the reviewer can't grade it. Flag every concern; let the comment-vs-decision distinction be the reviewer's call, not the author's. |
+
+## Red Flags
+
+- Verdict line absent or ambiguous ("looks fine" instead of CLEARED / NOT CLEARED).
+- Unresolved decisions silently defaulted instead of surfaced.
+- Review report written somewhere other than the end of the plan file (split or duplicated reports).
+- Diff Review entry pre-dating the current HEAD without re-running for the new commits.
+- A spec marked `locked` with unresolved decisions in the review report.
+- The review skipped Implementation / Test / Migration item passes on a non-trivial spec.
+
+## Verification
+
+A plan-eng-review is DONE when:
+
+- [ ] Each axis (Implementation / Test / Migration / Scope Drift / Adversarial) ran or was deliberately skipped per its tier rules.
+- [ ] Findings have severity and a concrete fix or follow-up.
+- [ ] Unresolved decisions are listed explicitly — none silently defaulted.
+- [ ] The `## REVIEW REPORT` section is written as the last section of the plan file (replacing any prior).
+- [ ] Verdict line is unambiguous: CLEARED for implementation / NOT CLEARED + blocker / CLEARED for merge.
+- [ ] If a Diff Review entry exists for the current HEAD, it was reused (not re-run) and folded into the verdict.
