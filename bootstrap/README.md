@@ -13,31 +13,37 @@ target-repo/
   CLAUDE.md                                      (from alice/template/CLAUDE.md, only if missing)
   .gitignore                                     (.alice/mem/ appended if missing)
   .alice/                                        framework payload — vendored copy of alice/framework/
-    rules/  templates/  commands/  skills/  agents/  bin/
+    rules/  templates/  commands/  references/  skills/  agents/  bin/
   .claude/                                       Claude Code config — relative symlinks into .alice/
-    _alice    -> ../.alice                       (legacy/convenience path)
-    rules     -> ../.alice/rules
-    templates -> ../.alice/templates
-    commands  -> ../.alice/commands
+    _alice      -> ../.alice                     (legacy/convenience path)
+    rules       -> ../.alice/rules
+    templates   -> ../.alice/templates
+    commands    -> ../.alice/commands
+    references  -> ../.alice/references
     skills/
-      browse                -> ../../.alice/skills/browse
-      diana                 -> ../../.alice/skills/diana
-      hugh                  -> ../../.alice/skills/hugh
-      investigate           -> ../../.alice/skills/investigate
-      plan-eng-review       -> ../../.alice/skills/plan-eng-review
-      pr-slicer             -> ../../.alice/skills/pr-slicer
-      qa                    -> ../../.alice/skills/qa
-      research              -> ../../.alice/skills/research
-      review                -> ../../.alice/skills/review
-      security-audit        -> ../../.alice/skills/security-audit
-      setup-browser-cookies -> ../../.alice/skills/setup-browser-cookies
+      browse                      -> ../../.alice/skills/browse
+      diagnosis                   -> ../../.alice/skills/diagnosis
+      diana                       -> ../../.alice/skills/diana
+      hugh                        -> ../../.alice/skills/hugh
+      investigate                 -> ../../.alice/skills/investigate
+      ouroboros                   -> ../../.alice/skills/ouroboros
+      plan-eng-review             -> ../../.alice/skills/plan-eng-review
+      pr-slicer                   -> ../../.alice/skills/pr-slicer
+      qa                          -> ../../.alice/skills/qa
+      research                    -> ../../.alice/skills/research
+      review                      -> ../../.alice/skills/review
+      security-audit              -> ../../.alice/skills/security-audit
+      setup-browser-cookies       -> ../../.alice/skills/setup-browser-cookies
     agents/
       code-reviewer.md          -> ../../.alice/agents/code-reviewer.md
+      findings-triager.md       -> ../../.alice/agents/findings-triager.md
+      resolution-evaluator.md   -> ../../.alice/agents/resolution-evaluator.md
       pr-slicer-executor.md     -> ../../.alice/agents/pr-slicer-executor.md
       refactor-cleaner.md       -> ../../.alice/agents/refactor-cleaner.md
       security-reviewer.md      -> ../../.alice/agents/security-reviewer.md
       seo-specialist.md         -> ../../.alice/agents/seo-specialist.md
       silent-failure-hunter.md  -> ../../.alice/agents/silent-failure-hunter.md
+      user-testing-validator.md -> ../../.alice/agents/user-testing-validator.md
       wiki-maintainer.md        -> ../../.alice/agents/wiki-maintainer.md
   docs/
     README.md
@@ -91,6 +97,7 @@ Then create these **relative** symlinks (skip any that already exist — surface
 | `.claude/rules` | `../.alice/rules` |
 | `.claude/templates` | `../.alice/templates` |
 | `.claude/commands` | `../.alice/commands` |
+| `.claude/references` | `../.alice/references` |
 | `.claude/skills/<name>` for each dir under `.alice/skills/` | `../../.alice/skills/<name>` |
 | `.claude/agents/<name>.md` for each file under `.alice/agents/` | `../../.alice/agents/<name>.md` |
 
@@ -117,7 +124,7 @@ Ensure `.alice/mem/` is ignored. If `<target>/.gitignore` exists and already con
 .alice/mem/
 ```
 
-`.alice/` itself is **vendored content** — keep it tracked (it's how the framework travels with the repo). Only `.alice/mem/` (skills' runtime scratch state — diana / hugh / pr-slicer / qa / review run dirs, browser CDP profile, sync clones) is gitignored.
+`.alice/` itself is **vendored content** — keep it tracked (it's how the framework travels with the repo). Only `.alice/mem/` (skills' runtime scratch state — diana / hugh / diagnosis / ouroboros / pr-slicer / qa / review run dirs, browser CDP profile, sync clones) is gitignored.
 
 **Migrating from older alice (`.tmp/`).** If the adopter is upgrading from a pre-v1.3.0 alice that wrote state under `.tmp/`, replace any `.tmp/` line in `.gitignore` with `.alice/mem/` and run the v1.3.0 migration to relocate existing state. `/sync` handles this automatically when it runs the v1.3.0 migration.
 
@@ -167,8 +174,8 @@ Adopters bootstrapped before `.alice/VERSION` existed get a fallback prompt in `
 ## Removing alice
 
 ```bash
-rm -rf .alice .claude/_alice .claude/{rules,templates,commands} \
-       .claude/skills/{browse,diana,hugh,investigate,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
+rm -rf .alice .claude/_alice .claude/{rules,templates,commands,references} \
+       .claude/skills/{browse,diagnosis,diana,hugh,investigate,ouroboros,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
        .claude/agents
 ```
 

@@ -1,7 +1,7 @@
 ---
 name: browse
 preamble-tier: 1
-version: 1.1.0
+version: 1.1.1
 description: |
   Fast headless browser for QA testing and site dogfooding. Navigate any URL, interact with
   elements, verify page state, diff before/after actions, take annotated screenshots, check
@@ -27,10 +27,28 @@ echo "BRANCH: ${BRANCH:-unknown}"
 
 # browse: QA Testing & Dogfooding
 
+## Overview
+
+Persistent headless Chromium primitives for fast browser QA, interaction, screenshots, snapshots, console checks, and network inspection.
+
+## When to Use
+
+- Use when asked to open a URL, test a site, take a screenshot, dogfood a flow, verify page state, or gather browser evidence.
+- Use when another skill needs raw browser primitives rather than a full QA sweep.
+- Use when validating responsive layouts, forms, uploads, dialogs, auth state, or post-action DOM changes.
+
+**When NOT to use:**
+
+- Do not use for non-browser code paths or pure backend/unit-test verification.
+- Do not use when a full test-and-fix QA loop is needed; use `qa` instead.
+- Do not use before running the setup check and confirming the browse binary is ready.
+
+## Process
+
 Persistent headless Chromium. First call auto-starts (~3s), then ~100ms per command.
 State persists between calls (cookies, tabs, login sessions).
 
-## SETUP (run this check BEFORE any browse command)
+### SETUP (run this check BEFORE any browse command)
 
 ```bash
 _ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
@@ -53,7 +71,7 @@ If `NEEDS_SETUP`:
    The script auto-installs bun if missing (with SHA-256 checksum verification), runs `bun install`, and compiles the binary via `bun run build`. Output lands at `.alice/skills/browse/dist/browse`.
 3. Re-run the SETUP check above to confirm `READY:`.
 
-## Core QA Patterns
+### Core QA Patterns
 
 ### 1. Verify a page loads correctly
 ```bash
@@ -135,7 +153,7 @@ $B diff https://staging.app.com https://prod.app.com
 ### 11. Show screenshots to the user
 After `$B screenshot`, `$B snapshot -a -o`, or `$B responsive`, always use the Read tool on the output PNG(s) so the user can see them. Without this, screenshots are invisible.
 
-## User Handoff
+### User Handoff
 
 When you hit something you can't handle in headless mode (CAPTCHA, complex auth, multi-factor
 login), hand off to the user:
@@ -161,7 +179,7 @@ $B resume
 The browser preserves all state (cookies, localStorage, tabs) across the handoff.
 After `resume`, you get a fresh snapshot of wherever the user left off.
 
-## Snapshot Flags
+### Snapshot Flags
 
 The snapshot is your primary tool for understanding and interacting with pages.
 
@@ -198,7 +216,7 @@ $B click @c1       # cursor-interactive ref (from -C)
 
 Refs are invalidated on navigation — run `snapshot` again after `goto`.
 
-## Full Command List
+### Full Command List
 
 ### Navigation
 | Command | Description |
@@ -304,3 +322,34 @@ Refs are invalidated on navigation — run `snapshot` again after `goto`.
 | `state save|load <name>` | Save/load browser state (cookies + URLs) |
 | `status` | Health check |
 | `stop` | Shutdown server |
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "The page rendered something, so it works." | "Rendered" ≠ "correct". Check console for errors, network for failed requests, and the actual DOM for the elements the feature claims to produce. |
+| "I'll skip the snapshot and just look at the screenshot." | Screenshots show pixels; snapshots show interactive structure. Click targets, form fields, and ARIA hooks live in the snapshot, not the image. Use both. |
+| "Re-running browse to inspect would burn tool calls." | Each browse call is ~100ms warm. Re-checking after an action is cheap; assuming the action worked is expensive when it didn't. |
+| "The login worked in browse, so the user's flow works." | The headless session can have a different cookie/session shape than the user's real browser. For auth-sensitive bug repros, use `setup-browser-cookies` to mirror the real session. |
+| "Diffing snapshots is overkill for this small interaction." | The diff catches what you didn't notice changed (a hidden modal appeared, a CSP warning fired, a network call regressed). Default to `-D` after every meaningful action. |
+
+## Red Flags
+
+- Reporting "feature works" without console + network checks.
+- Skipping the SETUP block and assuming the binary is present.
+- Running browse against production without explicit user permission for destructive actions.
+- Asserting visibility on an element ref captured from a stale snapshot (refs invalidate on re-render).
+- Closing or restarting the server mid-session without preserving in-flight state.
+- Pasting cookie values or session tokens into chat output.
+
+## Verification
+
+After a browse-driven check:
+
+- [ ] SETUP returned `READY:` (binary present, build not needed mid-run).
+- [ ] Console was inspected — no unexpected errors.
+- [ ] Network was inspected — no failed requests on the page under test.
+- [ ] Key elements verified visible (`is visible "<selector>"`).
+- [ ] If an action was taken, a `snapshot -D` diff was produced against the pre-action snapshot.
+- [ ] Screenshots saved for any user-visible report are referenced by file path in the output.
+- [ ] Session state (cookies, tabs) is left in a clean state for the next caller, or deliberately preserved with a note saying why.

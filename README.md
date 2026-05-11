@@ -27,9 +27,10 @@ A cohesive **agent SOP** for any codebase:
 - **Ledger** — append-only decisions + post-feature retros + bug patterns.
 - **Rules** — seven binding rules covering docs layout, doc updates, spec-required, implementation quality, test discipline, post-feature retro, sub-agent orchestration.
 - **Templates** — overview / spec / decision / implementation starters.
-- **Skills** — `/plan`, `/qa`, `/browse`, `/review`, `/plan-eng-review`, `/investigate`, `/setup-browser-cookies`, `/security-audit`, `/research`, `/pr-slicer`, `/diana` (end-to-end SOP runner), `/hugh` (parallel diana fan-out across worktrees). Each writes state to `<project-root>/.alice/mem/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`.
+- **Skills** — `/plan`, `/qa`, `/diagnosis`, `/ouroboros`, `/browse`, `/review`, `/plan-eng-review`, `/investigate`, `/setup-browser-cookies`, `/security-audit`, `/research`, `/pr-slicer`, `/diana` (end-to-end SOP runner), `/hugh` (parallel diana fan-out across worktrees). Each writes state to `<project-root>/.alice/mem/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`. Every skill follows a shared authoring contract — see `framework/skills/README.md`.
+- **References** — harness-agnostic reference catalogs adopters and skills can link to. Currently: `orchestration-patterns.md` (5 endorsed multi-agent shapes + 4 anti-patterns; pairs with the `sub-agent-orchestration` rule).
 - **Upgrade path** — `/sync` pulls the latest alice into the adopter's `.alice/`. Classifies every changed file into four tiers (safe add / clean update / local conflict / structural migration), walks the user through each, and stamps `.alice/VERSION`. Never auto-commits. Full flow: `framework/commands/sync.md`; structural migrations documented under `framework/migrations/`.
-- **Sub-agents** — `code-reviewer`, `security-reviewer`, `silent-failure-hunter`, `refactor-cleaner`, `seo-specialist`, `wiki-maintainer`, `pr-slicer-executor`. Invoked automatically during the SOP, or delegated into by skills. Stack-agnostic (except `seo-specialist`, which self-gates to web-facing projects); see `template/CLAUDE.md` "Agent routing" for invocation rules.
+- **Sub-agents** — `code-reviewer`, `security-reviewer`, `user-testing-validator`, `findings-triager`, `resolution-evaluator`, `silent-failure-hunter`, `refactor-cleaner`, `seo-specialist`, `wiki-maintainer`, `pr-slicer-executor`. Invoked automatically during the SOP, or delegated into by skills. Stack-agnostic (except `seo-specialist`, which self-gates to web-facing projects); see `template/CLAUDE.md` "Agent routing" for invocation rules.
 
 ## Scope
 
@@ -43,12 +44,13 @@ The skill set will grow over time as patterns prove themselves across multiple p
 
 ```
 target-repo/
-  .alice/                  framework payload (rules, templates, commands, skills, agents, bin)
+  .alice/                  framework payload (rules, templates, commands, references, skills, agents, bin)
   .claude/                 Claude Code config — thin shim of symlinks into .alice/
-    _alice    -> ../.alice
-    rules     -> ../.alice/rules
-    templates -> ../.alice/templates
-    commands  -> ../.alice/commands
+    _alice      -> ../.alice
+    rules       -> ../.alice/rules
+    templates   -> ../.alice/templates
+    commands    -> ../.alice/commands
+    references  -> ../.alice/references
     skills/<name> -> ../../.alice/skills/<name>
     agents/<name> -> ../../.alice/agents/<name>
   .codex/  (optional)      future Codex / other-agent config can symlink the same way
@@ -70,11 +72,16 @@ alice/
     rules/                        7 binding rules
     templates/                    overview / spec / decision / implementation / todo
     commands/                     /plan, /sync commands
-    skills/                       /qa, /browse, /review, /plan-eng-review,
+    references/                   harness-agnostic reference catalogs
+                                  (orchestration-patterns.md, …)
+    skills/                       README.md (skill authoring contract) +
+                                  /qa, /diagnosis, /ouroboros, /browse, /review, /plan-eng-review,
                                   /investigate, /setup-browser-cookies,
                                   /security-audit, /research, /pr-slicer,
                                   /diana, /hugh
     agents/                       code-reviewer, security-reviewer,
+                                  user-testing-validator, findings-triager,
+                                  resolution-evaluator,
                                   silent-failure-hunter, refactor-cleaner,
                                   seo-specialist, wiki-maintainer,
                                   pr-slicer-executor
@@ -85,7 +92,7 @@ alice/
     CLAUDE.md                     starter for the target repo's CLAUDE.md
     docs/                         scaffold copied into target/docs/
       README.md
-      todos/{overview,<slug>}.md
+      todos/{overview,<slug>}.md and todos/findings/
       wiki/{README,current-status,architecture,domain-model}.md
       plans/{active,archive}/.gitkeep
       ledger/{decisions,experiences}.md
@@ -116,6 +123,7 @@ Distilled from an internal project's agent operating manual on 2026-04-20. The f
 
 ## References
 
+- [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills)
 - [andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)
 - [everything-claude-code](https://github.com/affaan-m/everything-claude-code)
 - [graphify](https://github.com/safishamsi/graphify)

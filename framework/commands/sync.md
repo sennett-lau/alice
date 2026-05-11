@@ -226,7 +226,7 @@ Sanity pass, idempotent:
 
 - For every dir under `.alice/skills/`, ensure `.claude/skills/<name>` exists as a relative symlink to `../../.alice/skills/<name>`.
 - For every file under `.alice/agents/`, ensure `.claude/agents/<name>.md` exists as a relative symlink to `../../.alice/agents/<name>.md`.
-- Ensure `.claude/rules`, `.claude/templates`, `.claude/commands`, `.claude/_alice` symlinks exist and point at `../.alice/*`.
+- Ensure `.claude/rules`, `.claude/templates`, `.claude/commands`, `.claude/references`, `.claude/_alice` symlinks exist and point at `../.alice/*`.
 
 Print a summary of added/unchanged symlinks. Do **not** delete symlinks pointing at files that no longer exist in `.alice/` — that's a Tier 4 concern (migration file should document the removal).
 
