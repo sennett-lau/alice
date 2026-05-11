@@ -10,6 +10,10 @@ docs/
   todos/
     overview.md                         # auto-loaded index
     <slug>.md                           # per-TODO detail file (load on demand)
+    findings/
+      overview.md                       # auto-loaded diagnosis findings index
+      <slug>.md                         # per-finding detail file (load on demand)
+      _dropped.md                       # query-only noise log from findings triage
   wiki/{README,current-status,architecture,domain-model}.md + feature pages
   plans/active/<YYYY-MM-DD>_<slug>/{overview,spec,decision,implementation}.md
   plans/archive/<frozen folders>
@@ -25,6 +29,9 @@ docs/
 | `docs/wiki/<page>.md` (other) | load on demand — pulled in when index entry matches the task |
 | `docs/todos/overview.md` | auto-load |
 | `docs/todos/<slug>.md` | load on demand when working that TODO |
+| `docs/todos/findings/overview.md` | auto-load when running `diagnosis` or `ouroboros`; otherwise query on demand |
+| `docs/todos/findings/<slug>.md` | load on demand when fixing or evaluating that finding |
+| `docs/todos/findings/_dropped.md` | query-only |
 | `docs/plans/active/<current>/overview.md` | auto-load while feature in flight |
 | `docs/plans/active/<current>/{spec,decision,implementation}.md` | load on demand during feature work |
 | `docs/plans/archive/**` | query-only |

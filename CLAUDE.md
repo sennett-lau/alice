@@ -6,7 +6,7 @@ Full tour in [`README.md`](README.md). Adoption recipe in [`bootstrap/README.md`
 
 ## What alice is
 
-A generic agentic docs/plans/ledger framework: rules, templates, a `/plan` command, a starter skill set (`qa`, `browse`, `review`, `plan-eng-review`, `investigate`, `setup-browser-cookies`, `security-audit`), and a docs scaffold (`wiki/` + `plans/active,archive/` + `ledger/` + `todos/`). Stack- and domain-agnostic on purpose — adopter agents fill in stack-specific details at setup time, alice stays universal.
+A generic agentic docs/plans/ledger framework: rules, templates, a `/plan` command, a starter skill set (`qa`, `browse`, `diagnosis`, `ouroboros`, `review`, `plan-eng-review`, `investigate`, `setup-browser-cookies`, `security-audit`, `research`, `pr-slicer`, `diana`, `hugh`), and a docs scaffold (`wiki/` + `plans/active,archive/` + `ledger/` + `todos/`). Stack- and domain-agnostic on purpose — adopter agents fill in stack-specific details at setup time, alice stays universal.
 
 ## Repo layout
 

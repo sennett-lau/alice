@@ -22,9 +22,11 @@ target-repo/
     references  -> ../.alice/references
     skills/
       browse                      -> ../../.alice/skills/browse
+      diagnosis                   -> ../../.alice/skills/diagnosis
       diana                       -> ../../.alice/skills/diana
       hugh                        -> ../../.alice/skills/hugh
       investigate                 -> ../../.alice/skills/investigate
+      ouroboros                   -> ../../.alice/skills/ouroboros
       plan-eng-review             -> ../../.alice/skills/plan-eng-review
       pr-slicer                   -> ../../.alice/skills/pr-slicer
       qa                          -> ../../.alice/skills/qa
@@ -34,11 +36,14 @@ target-repo/
       setup-browser-cookies       -> ../../.alice/skills/setup-browser-cookies
     agents/
       code-reviewer.md          -> ../../.alice/agents/code-reviewer.md
+      findings-triager.md       -> ../../.alice/agents/findings-triager.md
+      resolution-evaluator.md   -> ../../.alice/agents/resolution-evaluator.md
       pr-slicer-executor.md     -> ../../.alice/agents/pr-slicer-executor.md
       refactor-cleaner.md       -> ../../.alice/agents/refactor-cleaner.md
       security-reviewer.md      -> ../../.alice/agents/security-reviewer.md
       seo-specialist.md         -> ../../.alice/agents/seo-specialist.md
       silent-failure-hunter.md  -> ../../.alice/agents/silent-failure-hunter.md
+      user-testing-validator.md -> ../../.alice/agents/user-testing-validator.md
       wiki-maintainer.md        -> ../../.alice/agents/wiki-maintainer.md
   docs/
     README.md
@@ -119,7 +124,7 @@ Ensure `.alice/mem/` is ignored. If `<target>/.gitignore` exists and already con
 .alice/mem/
 ```
 
-`.alice/` itself is **vendored content** — keep it tracked (it's how the framework travels with the repo). Only `.alice/mem/` (skills' runtime scratch state — diana / hugh / pr-slicer / qa / review run dirs, browser CDP profile, sync clones) is gitignored.
+`.alice/` itself is **vendored content** — keep it tracked (it's how the framework travels with the repo). Only `.alice/mem/` (skills' runtime scratch state — diana / hugh / diagnosis / ouroboros / pr-slicer / qa / review run dirs, browser CDP profile, sync clones) is gitignored.
 
 **Migrating from older alice (`.tmp/`).** If the adopter is upgrading from a pre-v1.3.0 alice that wrote state under `.tmp/`, replace any `.tmp/` line in `.gitignore` with `.alice/mem/` and run the v1.3.0 migration to relocate existing state. `/sync` handles this automatically when it runs the v1.3.0 migration.
 
@@ -170,7 +175,7 @@ Adopters bootstrapped before `.alice/VERSION` existed get a fallback prompt in `
 
 ```bash
 rm -rf .alice .claude/_alice .claude/{rules,templates,commands,references} \
-       .claude/skills/{browse,diana,hugh,investigate,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
+       .claude/skills/{browse,diagnosis,diana,hugh,investigate,ouroboros,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
        .claude/agents
 ```
 
