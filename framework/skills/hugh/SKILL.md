@@ -1,7 +1,7 @@
 ---
 name: hugh
 preamble-tier: 4
-version: 1.0.0
+version: 1.0.1
 description: |
   Orchestrate multiple `diana` runs in parallel — one per feature — across
   isolated git worktrees so independent feature work ships concurrently
@@ -34,6 +34,26 @@ echo "BRANCH: $(git branch --show-current)"
 echo "RUN_TS: $RUN_TS"
 ```
 
+# Hugh Parallel Diana Orchestrator
+
+## Overview
+
+Splits multiple independent feature requests and dispatches one `diana` run per feature across isolated worktrees, then monitors, relays, and drains the batch.
+
+## When to Use
+
+- Use when asked to run `hugh`, run multiple dianas, fan out diana, or ship several independent features in parallel.
+- Use when features can be isolated by branch/worktree and benefit from concurrent execution.
+- Use when the main value is orchestration, progress monitoring, cross-feature signaling, and final aggregation.
+
+**When NOT to use:**
+
+- Do not use for a single feature unless explicitly stress-testing the orchestration path.
+- Do not use when features are tightly coupled and must be implemented in one ordered working tree.
+- Do not use to replace `diana`'s implementation contract; hugh delegates feature work to diana.
+
+## Process
+
 Run state lives at `<repo>/.alice/mem/hugh/<run-slug>/`. Gitignored. Every autonomous decision (split, port allocation, relay) is logged so the user can audit what hugh did without re-running.
 
 **Load the orchestration rule.** Every sub-agent dispatch in this skill must follow `.alice/rules/sub-agent-orchestration.md` — progress polling (≥1/min) and permission escalation. Hugh fans out N background diana sub-agents per run; without polling, a single stuck diana stalls the whole batch silently.
@@ -42,7 +62,7 @@ Run state lives at `<repo>/.alice/mem/hugh/<run-slug>/`. Gitignored. Every auton
 
 ---
 
-## Arguments (`$ARGUMENTS`)
+### Arguments (`$ARGUMENTS`)
 
 ```
 /hugh [<multi-feature-description>] [--mode=fully-auto|murmur] [--effort=low|medium|high|max]
@@ -96,7 +116,7 @@ If `$ARGUMENTS` is empty AND no runs exist under `.alice/mem/hugh/`: print the u
 
 ---
 
-## Modes
+### Modes
 
 The two modes are forwarded to each spawned diana verbatim and ALSO control hugh's own intake behavior:
 
@@ -111,7 +131,7 @@ The two modes are forwarded to each spawned diana verbatim and ALSO control hugh
 
 ---
 
-## Effort tiers
+### Effort tiers
 
 Effort is forwarded verbatim to each spawned diana. Hugh does NOT re-interpret tiers; diana owns the SOP completeness contract. Hugh's own work (split, dispatch, monitor, drain) is the same at every tier.
 
@@ -119,7 +139,7 @@ If sibling features have wildly different review needs (one trivial, one auth-to
 
 ---
 
-## Resume
+### Resume
 
 Runs can die mid-orchestration — network drop, token-limit truncation, crash, user interrupt. The `.alice/mem/hugh/<run-slug>/` dir is the resume source of truth. **Important:** each spawned diana also has its own resumable `.alice/mem/diana/<diana-run-slug>/` inside its worktree. Hugh resume re-anchors against the hugh run, then either asks each in-flight diana to resume itself (via `/diana --resume <slug>` issued in the worktree), or restarts the feature from scratch if the diana state is unsalvageable.
 
@@ -146,7 +166,7 @@ Forces hugh to restart only the named feature(s) regardless of their `status.txt
 
 ---
 
-## The pipeline
+### The pipeline
 
 All steps run under a common run slug. For a new run:
 
@@ -438,7 +458,7 @@ Never auto-push. Never auto-create PR. Hugh stops at "staged locally per worktre
 
 ---
 
-## Sub-agent capture contract
+### Sub-agent capture contract
 
 Same shape as diana — every step that uses the `Agent` tool MUST record the returned agent ID in its transcript file under a `## Spawned agents` subheading, one line per dispatch:
 
@@ -450,7 +470,7 @@ The `feature=` field is hugh-specific — it links the agent ID back to the feat
 
 ---
 
-## Decision policy
+### Decision policy
 
 Same five principles as diana, with hugh-specific applications:
 
@@ -463,7 +483,7 @@ Same five principles as diana, with hugh-specific applications:
 
 ---
 
-## Failure handling
+### Failure handling
 
 Retry / escalation for hugh's own steps:
 
@@ -482,7 +502,7 @@ All other fully-auto blockers write to `$RUN_DIR/BLOCKED.md` with full context a
 
 ---
 
-## State & audit trail
+### State & audit trail
 
 `.alice/mem/hugh/<run-slug>/` layout after a complete run:
 
@@ -531,7 +551,7 @@ Everything under `.alice/mem/` is gitignored — including the worktrees, even t
 
 ---
 
-## Hard rules
+### Hard rules
 
 - **Hugh is an orchestrator, not an implementer.** Hugh dispatches dianas and aggregates results. Hugh never edits adopter source files outside `<repo>/.alice/mem/`. Hugh never invokes `/plan`, `/review`, `/security-audit` directly — those are diana's contract, run inside each spawned agent's session.
 - **Never push, create PRs, or deploy.** Same as diana. Hugh stops at "staged locally per worktree."

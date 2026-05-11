@@ -1,7 +1,7 @@
 ---
 name: pr-slicer
 preamble-tier: 4
-version: 1.0.0
+version: 1.0.1
 description: |
   Slice a large working branch / PR into a chain of smaller, reviewable PRs.
   Detects adopter-declared migration-class files (forces a migration PR
@@ -31,13 +31,33 @@ mkdir -p "$ROOT/.alice/mem/pr-slicer"
 echo "BRANCH: $(git branch --show-current)"
 ```
 
+# PR Slicer
+
+## Overview
+
+Splits a large working branch or PR into a dependency-ordered chain of smaller, reviewable PRs, with optional executor dispatch and final adversarial pass.
+
+## When to Use
+
+- Use when asked to slice a PR, break a branch into smaller PRs, or make an oversized diff reviewable.
+- Use when the current branch has separable migration, infrastructure, refactor, and behavior slices.
+- Use when preserving dependency order and reviewer context matters.
+
+**When NOT to use:**
+
+- Do not use for already-small diffs that can be reviewed directly.
+- Do not use when the branch cannot be split without changing behavior or breaking dependencies.
+- Do not dispatch executors without first confirming the slice plan with the user.
+
+## Process
+
 State lives at `<repo>/.alice/mem/pr-slicer/<slug>/`. Gitignored. No telemetry.
 
 **Load the orchestration rule.** Every sub-agent dispatch in this skill must follow `.alice/rules/sub-agent-orchestration.md` — progress polling (≥1/min) and permission escalation. Read it before Step 6.
 
 ---
 
-## Arguments (`$ARGUMENTS`)
+### Arguments (`$ARGUMENTS`)
 
 ```
 /pr-slicer [<PR# | branch>] [--mode=sequential|parallel]
@@ -69,13 +89,11 @@ If the user invokes with no args from the base branch: print the usage hint and 
 
 ---
 
-# PR Slicer
-
 Orchestrator. Main session plans + writes specs + dispatches executors + runs reviews + handles all remote side-effects. Executor sub-agents (`pr-slicer-executor`) do the per-PR code work in isolated working trees and hand back a structured report.
 
 ---
 
-## Step 1 — Trigger gate
+### Step 1 — Trigger gate
 
 Parse `$ARGUMENTS` into `{source, mode}`. `mode` defaults to `sequential` if the `--mode=` flag is absent or malformed.
 
@@ -102,7 +120,7 @@ git fetch origin "$BASE" --quiet
 
 ---
 
-## Step 2 — Evaluate changes
+### Step 2 — Evaluate changes
 
 ```bash
 git diff origin/$BASE...$SRC_BRANCH --stat
@@ -123,7 +141,7 @@ Also check for active plan folder under `docs/plans/active/` matching `SRC_BRANC
 
 ---
 
-## Step 2.5 — Detect migration-class files
+### Step 2.5 — Detect migration-class files
 
 **What counts as "migration-class".** Files that are:
 
@@ -153,7 +171,7 @@ Record `MIGRATION_FILES[]`. If empty, skip Step 3.1 entirely — no migration PR
 
 ---
 
-## Step 3 — Chunking rules
+### Step 3 — Chunking rules
 
 Apply in order. Produces `PRS[]` — an ordered array with `{id, title, branch, base, depends_on[], files[], rationale, self_review[]}`.
 
@@ -192,7 +210,7 @@ The PR that actually "moves to achieve" the feature goal (typically wiring, feat
 
 ---
 
-## Step 4 — Write the plan
+### Step 4 — Write the plan
 
 ### `$PLAN_DIR/overview.md`
 
@@ -278,7 +296,7 @@ For the **migration spec**, additionally include:
 
 ---
 
-## Step 5 — Confirm plan with user
+### Step 5 — Confirm plan with user
 
 Print the overview table + the path to `overview.md`. Use `AskUserQuestion`:
 
@@ -294,7 +312,7 @@ If B: stop. If C: loop back to Step 3 for the named PR.
 
 ---
 
-## Step 6 — Dispatch executors
+### Step 6 — Dispatch executors
 
 Mode (`sequential` | `parallel`) was resolved in Step 1. Default is `sequential`.
 
@@ -470,7 +488,7 @@ Force-with-lease only — never plain force-push.
 
 ---
 
-## Step 7 — End-of-chain adversarial pass (gates the final PR)
+### Step 7 — End-of-chain adversarial pass (gates the final PR)
 
 Per-slice review is narrow by design. Before the **final implementation PR** (Step 8) is opened, run one wide pass against the cumulative diff to catch issues that only show up when all slices compose.
 
@@ -486,7 +504,7 @@ Skip if the chain is trivial (migration PR + one slice + final, or fewer).
 
 ---
 
-## Step 8 — Final implementation PR
+### Step 8 — Final implementation PR
 
 Last code PR. Depends on every preceding slice being merged. Usually contains:
 - Feature flag flip / final wiring
@@ -497,7 +515,7 @@ Dispatched identically to the other slices but only after all deps are merged an
 
 ---
 
-## Step 9 — Follow-up TODO PR (from deferred review findings)
+### Step 9 — Follow-up TODO PR (from deferred review findings)
 
 If `$PLAN_DIR/followups.md` has any entries, open a dedicated follow-up PR so the deferred findings don't silently vanish. This PR contains **no code fixes** — it's an inbox, user triages later.
 
@@ -513,7 +531,7 @@ If `followups.md` is empty: skip entirely.
 
 ---
 
-## Gotchas
+### Gotchas
 
 - **Uncommitted source branch changes** → stop, ask user to commit/stash. Slicer works off committed history only.
 - **Migration files must land first** — other slices rebase on them. If the adopter's migration procedure involves regeneration (e.g. drizzle's `db:generate`, prisma's `migrate`), follow the adopter-specific procedure documented in their CLAUDE.md.

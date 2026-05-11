@@ -1,7 +1,7 @@
 ---
 name: setup-browser-cookies
 preamble-tier: 1
-version: 1.0.0
+version: 1.0.1
 description: |
   Import cookies from your real Chromium browser into the headless browse session.
   Opens an interactive picker UI where you select which cookie domains to import.
@@ -24,9 +24,27 @@ echo "BRANCH: ${BRANCH:-unknown}"
 
 # Setup Browser Cookies
 
+## Overview
+
+Imports authenticated browser cookies from a real Chromium profile into the headless browse session through an interactive domain picker.
+
+## When to Use
+
+- Use before browser QA on authenticated pages when the headless session needs the user's real login state.
+- Use when asked to import cookies, log in to a site, authenticate the browser, or prepare authed QA.
+- Use when `browse` is not already connected to the user's real browser through CDP.
+
+**When NOT to use:**
+
+- Do not use when CDP mode is active; real-browser cookies are already available.
+- Do not use for non-Chromium authentication flows that the browse cookie importer cannot access.
+- Do not proceed before the browse binary setup check passes.
+
+## Process
+
 Import logged-in sessions from your real Chromium browser into the headless browse session.
 
-## CDP mode check
+### CDP mode check
 
 First, check if browse is already connected to the user's real browser:
 ```bash
@@ -34,18 +52,18 @@ $B status 2>/dev/null | grep -q "Mode: cdp" && echo "CDP_MODE=true" || echo "CDP
 ```
 If `CDP_MODE=true`: tell the user "Not needed — you're connected to your real browser via CDP. Your cookies and sessions are already available." and stop. No cookie import needed.
 
-## How it works
+### How it works
 
 1. Find the browse binary
 2. Run `cookie-import-browser` to detect installed browsers and open the picker UI
 3. User selects which cookie domains to import in their browser
 4. Cookies are decrypted and loaded into the Playwright session
 
-## Steps
+### Steps
 
 ### 1. Find the browse binary
 
-## SETUP (run this check BEFORE any browse command)
+### SETUP (run this check BEFORE any browse command)
 
 ```bash
 _ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
@@ -102,7 +120,7 @@ $B cookies
 
 Show the user a summary of imported cookies (domain counts).
 
-## Notes
+### Notes
 
 - On macOS, the first import per browser may trigger a Keychain dialog — click "Allow" / "Always Allow"
 - On Linux, `v11` cookies may require `secret-tool`/libsecret access; `v10` cookies use Chromium's standard fallback key

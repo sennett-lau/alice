@@ -1,7 +1,7 @@
 ---
 name: diana
 preamble-tier: 4
-version: 1.3.0
+version: 1.3.1
 description: |
   Run the alice SOP end-to-end for a given feature description with little
   or no human interaction. Two modes (`fully-auto` default, `murmur` for
@@ -35,13 +35,33 @@ echo "BRANCH: $(git branch --show-current)"
 echo "RUN_TS: $RUN_TS"
 ```
 
+# Diana End-to-End SOP Runner
+
+## Overview
+
+Runs the alice SOP end-to-end for one feature: plan, plan review, implementation, review, optional slicing/security, retrospective, documentation update, and child-agent drain.
+
+## When to Use
+
+- Use when asked to run `diana`, run the full SOP, auto-implement a feature, or ship a feature end-to-end.
+- Use when the user wants a bounded autonomous workflow with audit logs under `.alice/mem/diana/`.
+- Use when the work is one coherent feature rather than several independent features.
+
+**When NOT to use:**
+
+- Do not use for multiple independent features that should run concurrently; use `hugh`.
+- Do not use for one-off review, debugging, QA, or research tasks where a narrower skill applies.
+- Do not bypass user confirmation for irreversible operations or permission escalation points.
+
+## Process
+
 Run state lives at `<repo>/.alice/mem/diana/<run-slug>/`. Gitignored. Every autonomous decision is logged so the user can audit what diana did without re-running the session. The same state dir powers `--resume` after an interrupted run (network drop, token limit, crash) — see the "Resume" and "State & audit trail" sections.
 
 **Load the orchestration rule.** Every sub-agent dispatch in this skill must follow `.alice/rules/sub-agent-orchestration.md` — progress polling (≥1/min) and permission escalation. Diana fans out several sub-agents per run; without polling, a single stuck agent stalls the whole pipeline silently.
 
 ---
 
-## Arguments (`$ARGUMENTS`)
+### Arguments (`$ARGUMENTS`)
 
 ```
 /diana [<feature-description>] [--mode=fully-auto|murmur] [--effort=low|medium|high|max]
@@ -85,7 +105,7 @@ If `$ARGUMENTS` is empty AND no runs exist under `.alice/mem/diana/`: print the 
 
 ---
 
-## Modes
+### Modes
 
 The two modes differ ONLY in when diana is allowed to call `AskUserQuestion`:
 
@@ -120,7 +140,7 @@ To prevent murmur turning into a constant-prompt run, diana still applies the De
 
 ---
 
-## Effort tiers
+### Effort tiers
 
 | Step | low | medium (default) | high | max |
 |------|-----|------------------|------|-----|
@@ -163,7 +183,7 @@ Otherwise skip slicing — the PR is small enough to review whole. Record the de
 
 ---
 
-## Resume
+### Resume
 
 Runs can die mid-pipeline — network drop, token-limit truncation, crash, user interrupt. The `.alice/mem/diana/<run-slug>/` dir is the resume source of truth.
 
@@ -230,7 +250,7 @@ Useful when:
 
 ---
 
-## The pipeline
+### The pipeline
 
 All steps run under a common run slug. For a new run:
 
@@ -566,7 +586,7 @@ This lets Step 9 enumerate cheaply without scanning JSONL. Steps that skip the c
 
 ---
 
-## Decision policy
+### Decision policy
 
 Ordered principles diana applies when the chained skills prompt for input. Applies to BOTH modes — in fully-auto these resolve every decision silently; in murmur diana may interactively confirm an irreversible-class decision instead of auto-applying.
 
@@ -599,7 +619,7 @@ Database schema choices, external API contracts, destructive operations, authent
 
 ---
 
-## Failure handling
+### Failure handling
 
 Retry limits per step:
 - Build / test failure during implementation (Step 3): 3 attempts per step, fix + re-run each time.
@@ -639,7 +659,7 @@ In murmur, escalation pauses and prompts:
 
 ---
 
-## State & audit trail
+### State & audit trail
 
 `.alice/mem/diana/<run-slug>/` layout after a complete run:
 
@@ -727,7 +747,7 @@ One line per step — no prose, no filler. On resume, diana prints the resume ba
 
 ---
 
-## Hard rules
+### Hard rules
 
 - **Diana is an orchestrator, not a freelancer.** She invokes alice's existing skills (`/plan`, `/plan-eng-review`, `/review`, `/pr-slicer`, `/security-audit`) and follows alice's binding rules. She does not bypass them even in `low` effort — she only skips *adversarial* steps, never the SOP steps themselves (retro + doc update always run).
 - **Never push, create PRs, or deploy autonomously.** Diana stops at "staged locally." Remote side-effects are the user's to authorize per-run.

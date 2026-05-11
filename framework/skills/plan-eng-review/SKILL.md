@@ -1,7 +1,7 @@
 ---
 name: plan-eng-review
 preamble-tier: 3
-version: 1.0.0
+version: 1.0.1
 description: |
   Eng manager-mode plan review. Lock in the execution plan — architecture,
   data flow, diagrams, edge cases, test coverage, performance. Walks through
@@ -30,12 +30,30 @@ echo "BRANCH: ${BRANCH:-unknown}"
 
 # Plan Review Mode
 
+## Overview
+
+Engineering-manager-style plan review that challenges architecture, data flow, scope, edge cases, test strategy, operational risk, and unresolved decisions before implementation starts.
+
+## When to Use
+
+- Use when asked to review a plan, design, architecture, or implementation approach before coding.
+- Use when the user has a spec or plan and wants tradeoffs, diagrams, risks, and opinionated recommendations.
+- Use when catching wrong-direction work early is cheaper than reviewing a finished diff.
+
+**When NOT to use:**
+
+- Do not use for finished-code review; use `review`.
+- Do not use for active debugging; use `investigate`.
+- Do not start implementation while this review is still resolving architectural questions.
+
+## Process
+
 Review this plan thoroughly before making any code changes. For every issue or recommendation, explain the concrete tradeoffs, give me an opinionated recommendation, and ask for my input before assuming a direction.
 
-## Priority hierarchy
+### Priority hierarchy
 If the user asks you to compress or the system triggers context compaction: Step 0 > Test diagram > Opinionated recommendations > Everything else. Never skip Step 0 or the test diagram. Do not preemptively warn about context limits -- the system handles compaction automatically.
 
-## My engineering preferences (use these to guide your recommendations):
+### My engineering preferences (use these to guide your recommendations):
 * DRY is important—flag repetition aggressively.
 * Well-tested code is non-negotiable; I'd rather have too many tests than too few.
 * I want code that's "engineered enough" — not under-engineered (fragile, hacky) and not over-engineered (premature abstraction, unnecessary complexity).
@@ -43,7 +61,7 @@ If the user asks you to compress or the system triggers context compaction: Step
 * Bias toward explicit over clever.
 * Minimal diff: achieve the goal with the fewest new abstractions and files touched.
 
-## Cognitive Patterns — How Great Eng Managers Think
+### Cognitive Patterns — How Great Eng Managers Think
 
 These are not additional checklist items. They are the instincts that experienced engineering leaders develop over years — the pattern recognition that separates "reviewed the code" from "caught the landmine." Apply them throughout your review.
 
@@ -65,12 +83,12 @@ These are not additional checklist items. They are the instincts that experience
 
 When evaluating architecture, think "boring by default." When reviewing tests, think "systems over heroes." When assessing complexity, ask Brooks's question. When a plan introduces new infrastructure, check whether it's spending an innovation token wisely.
 
-## Documentation and diagrams:
+### Documentation and diagrams:
 * I value ASCII art diagrams highly — for data flow, state machines, dependency graphs, processing pipelines, and decision trees. Use them liberally in plans and design docs.
 * For particularly complex designs or behaviors, embed ASCII diagrams directly in code comments in the appropriate places: Models (data relationships, state transitions), Controllers (request flow), Concerns (mixin behavior), Services (processing pipelines), and Tests (what's being set up and why) when the test structure is non-obvious.
 * **Diagram maintenance is part of the change.** When modifying code that has ASCII diagrams in comments nearby, review whether those diagrams are still accurate. Update them as part of the same commit. Stale diagrams are worse than no diagrams — they actively mislead. Flag any stale diagrams you encounter during review even if they're outside the immediate scope of the change.
 
-## BEFORE YOU START:
+### BEFORE YOU START:
 
 ### Design Doc Check
 ```bash
@@ -83,7 +101,7 @@ DESIGN=$(ls -t .alice/mem/projects/$SLUG/*-$BRANCH-design-*.md 2>/dev/null | hea
 ```
 If a design doc exists, read it. Use it as the source of truth for the problem statement, constraints, and chosen approach. If it has a `Supersedes:` field, note that this is a revised design — check the prior version for context on what changed and why.
 
-## When no spec exists
+### When no spec exists
 
 If `/plan-eng-review` is invoked on a branch without a locked spec in `docs/plans/active/<slug>/spec.md`, tell the user: "No locked spec found for this branch. For non-trivial work, run `/plan` first — it produces the problem/goal/scope/acceptance/assumptions/verification-map artifact this review attacks. Want me to hand off to `/plan` now, or proceed with a standard review against the diff + commit messages?"
 
@@ -118,9 +136,9 @@ Always work through the full interactive review: one section at a time (Architec
 
 **Critical: Once the user accepts or rejects a scope reduction recommendation, commit fully.** Do not re-argue for smaller scope during later review sections. Do not silently reduce scope or skip planned components.
 
-## Review Sections (after scope is agreed)
+### Review Sections (after scope is agreed)
 
-## Confidence Calibration
+### Confidence Calibration
 
 Every finding MUST include a confidence score (1-10):
 
@@ -369,7 +387,7 @@ Evaluate:
 
 **STOP.** For each issue found in this section, call AskUserQuestion individually. One issue per call. Present options, state your recommendation, explain WHY. Do NOT batch multiple issues into one AskUserQuestion. Only proceed to the next section after ALL issues in this section are resolved.
 
-## Outside Voice — Independent Plan Challenge (optional, recommended)
+### Outside Voice — Independent Plan Challenge (optional, recommended)
 
 After all review sections are complete, offer an independent second opinion from a
 different AI system. Two models agreeing on a plan is stronger signal than one model's
@@ -510,7 +528,7 @@ finding via AskUserQuestion and getting explicit approval. This applies even whe
 agree with the outside voice. Cross-model consensus is a strong signal — present it as
 such — but the user makes the decision.
 
-## CRITICAL RULE — How to ask questions
+### CRITICAL RULE — How to ask questions
 Follow the AskUserQuestion format from the Preamble above. Additional rules for plan reviews:
 * **One issue = one AskUserQuestion call.** Never combine multiple issues into one question.
 * Describe the problem concretely, with file and line references.
@@ -520,7 +538,7 @@ Follow the AskUserQuestion format from the Preamble above. Additional rules for 
 * Label with issue NUMBER + option LETTER (e.g., "3A", "3B").
 * **Escape hatch:** If a section has no issues, say so and move on. If an issue has an obvious fix with no real alternatives, state what you'll do and move on — don't waste a question on it. Only use AskUserQuestion when there is a genuine decision with meaningful tradeoffs.
 
-## Required outputs
+### Required outputs
 
 ### "NOT in scope" section
 Every plan review MUST produce a "NOT in scope" section listing work that was considered and explicitly deferred, with a one-line rationale for each item.
@@ -604,16 +622,16 @@ At the end of the review, fill in and display this summary so the user can see a
 - Parallelization: ___ lanes, ___ parallel / ___ sequential
 - Lake Score: X/Y recommendations chose complete option
 
-## Retrospective learning
+### Retrospective learning
 Check the git log for this branch. If there are prior commits suggesting a previous review cycle (e.g., review-driven refactors, reverted changes), note what was changed and whether the current plan touches the same areas. Be more aggressive reviewing areas that were previously problematic.
 
-## Formatting rules
+### Formatting rules
 * NUMBER issues (1, 2, 3...) and LETTERS for options (A, B, C...).
 * Label with NUMBER + LETTER (e.g., "3A", "3B").
 * One sentence max per option. Pick in under 5 seconds.
 * After each review section, pause and ask for feedback before moving on.
 
-## Review Log
+### Review Log
 
 After producing the Completion Summary above, persist the review result.
 
@@ -635,7 +653,7 @@ Substitute values from the Completion Summary:
 - **MODE**: FULL_REVIEW / SCOPE_REDUCED
 - **COMMIT**: output of `git rev-parse --short HEAD`
 
-## Review Readiness Dashboard
+### Review Readiness Dashboard
 
 After completing the review, read the review log to display the dashboard.
 
@@ -677,7 +695,7 @@ Display:
 - Entries without a `commit` field: print `Note: {skill} from {date} predates commit tracking — consider re-running`.
 - If all match HEAD, print nothing.
 
-## Plan File Review Report
+### Plan File Review Report
 
 After the dashboard, also write the review status into the **plan file** so it's visible to anyone reading the plan.
 
@@ -722,7 +740,7 @@ Below the table, add these lines (omit any that are empty/not applicable):
 - If absent, **append it** to the end of the plan file.
 - Always place the review report as the last section. If it was mid-file, delete the old location and append at the end.
 
-## Next Steps
+### Next Steps
 
 After the dashboard:
 
@@ -730,7 +748,7 @@ After the dashboard:
 - If the review is **NOT CLEARED**, summarize the blocking issues in one line each and wait for the user to resolve them.
 - If a Diff Review entry already exists for the current HEAD and is clean, state `CLEARED for merge` and stop.
 
-## Unresolved decisions
+### Unresolved decisions
 If the user does not respond to an AskUserQuestion or interrupts to move on, note which decisions were left unresolved. At the end of the review, list these as "Unresolved decisions that may bite you later" — never silently default to an option.
 
 ## Common Rationalizations
