@@ -33,7 +33,6 @@ After Alice is adopted into a repo, most work starts from one of these paths.
 
 - `/plan` — turn non-trivial work into a spec-backed plan folder.
 - `/plan-eng-review` — challenge a drafted plan before implementation starts.
-- `/investigate` — chase bugs, regressions, stack traces, and broken behavior to root cause.
 - `/review` — review a branch before landing.
 
 **Validation**
@@ -41,6 +40,7 @@ After Alice is adopted into a repo, most work starts from one of these paths.
 - `/qa` — browser-test a feature or flow and capture evidence.
 - `/browse` — direct browser control for targeted checks.
 - `/diagnosis` — run parallel user-testing validators and promote findings into `docs/todos/findings/`.
+- `/security-audit` — focused security review.
 
 **Automation Wrappers**
 
@@ -50,7 +50,7 @@ After Alice is adopted into a repo, most work starts from one of these paths.
 
 **Utilities**
 
-- `/security-audit` — focused security review.
+- `/investigate` — chase bugs, regressions, stack traces, and broken behavior to root cause.
 - `/research` — source-grounded research with citations.
 - `/pr-slicer` — split large branches into reviewable PR slices.
 - `/setup-browser-cookies` — import real-browser auth state for browser testing.
