@@ -155,7 +155,22 @@ A `code-reviewer` that internally invokes `security-reviewer` when it sees auth 
 
 **What to do instead:** have the calling persona *recommend* a follow-up audit in its report. The user or a slash command runs the second pass.
 
-This is the same constraint enforced by `framework/skills/doubt-driven-development/SKILL.md`'s "Loading Constraints" section.
+The same constraint applies to any internal fresh-context review gate: the main session or slash command may spawn a reviewer; a persona must not spawn another persona.
+
+---
+
+## Fresh-context adversarial review as an internal gate
+
+Fresh-context review is useful, but it is **not** a user-facing skill. Users should not have to know when to ask the agent to doubt itself. Instead, obvious workflows apply it internally when the artifact is high-risk or already in review scope:
+
+- `plan-eng-review` challenges plans before implementation.
+- `review` challenges completed diffs before landing.
+- `diana` may use reviewer fan-out in high/max effort or when a decision touches irreversible data, security-sensitive logic, public APIs, or cross-module contracts.
+- `pr-slicer` runs its end-of-chain adversarial pass before the final PR when slices need to compose.
+
+Use the smallest reviewable artifact and a contract, not the author's reasoning. Ask the reviewer to find issues, unstated assumptions, edge cases, hidden coupling, or contract violations. The orchestrator reconciles findings; it does not rubber-stamp them.
+
+Do not add a separate "doubt" skill for this. If the work is a plan, use `plan-eng-review`; if it is code, use `review`; if it is an autonomous full SOP, let `diana` decide from effort/risk.
 
 ---
 

@@ -23,7 +23,6 @@ target-repo/
     skills/
       browse                      -> ../../.alice/skills/browse
       diana                       -> ../../.alice/skills/diana
-      doubt-driven-development    -> ../../.alice/skills/doubt-driven-development
       hugh                        -> ../../.alice/skills/hugh
       investigate                 -> ../../.alice/skills/investigate
       plan-eng-review             -> ../../.alice/skills/plan-eng-review
@@ -33,7 +32,6 @@ target-repo/
       review                      -> ../../.alice/skills/review
       security-audit              -> ../../.alice/skills/security-audit
       setup-browser-cookies       -> ../../.alice/skills/setup-browser-cookies
-      source-driven-development   -> ../../.alice/skills/source-driven-development
     agents/
       code-reviewer.md          -> ../../.alice/agents/code-reviewer.md
       pr-slicer-executor.md     -> ../../.alice/agents/pr-slicer-executor.md
@@ -172,7 +170,7 @@ Adopters bootstrapped before `.alice/VERSION` existed get a fallback prompt in `
 
 ```bash
 rm -rf .alice .claude/_alice .claude/{rules,templates,commands,references} \
-       .claude/skills/{browse,diana,doubt-driven-development,hugh,investigate,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies,source-driven-development} \
+       .claude/skills/{browse,diana,hugh,investigate,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
        .claude/agents
 ```
 

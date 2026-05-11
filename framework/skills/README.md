@@ -130,6 +130,7 @@ Do not duplicate content across skills — reference and link. When two skills o
 - The task is one-off enough that a slash command body or wiki page would carry the same content. Skills are for repeating workflows.
 - The content is policy, not workflow — it goes in `framework/rules/` instead. Rules say *what must be true*; skills say *what to do step by step*.
 - The content is reference material — it goes in `framework/references/` or the adopter's `docs/wiki/`. Skills aren't docs.
+- The content is a cross-cutting operating habit that should happen inside obvious workflows. Source-grounding third-party APIs belongs in `implementation-quality`; fresh-context adversarial checks belong inside `plan-eng-review`, `review`, `diana`, or an orchestration reference, not as standalone user-routed skills.
 - A more specific existing skill already covers >70% of the workflow. Extend that skill or merge into it instead of forking.
 
 ## Adding the skill to the index

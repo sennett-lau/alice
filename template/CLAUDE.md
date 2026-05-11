@@ -24,7 +24,7 @@ docs/                 project operating manual (wiki + plans + ledger)
   templates/            spec / decision / implementation / overview starters
   commands/             slash commands (e.g. /plan)
   references/           harness-agnostic reference catalogs (orchestration patterns, ...)
-  skills/               skill source (qa, browse, review, plan-eng-review, investigate, research, doubt-driven-development, source-driven-development, ...)
+  skills/               skill source (qa, browse, review, plan-eng-review, investigate, research, ...)
   agents/               sub-agent source (code-reviewer, security-reviewer, silent-failure-hunter, refactor-cleaner, seo-specialist, wiki-maintainer)
   bin/                  alice-* helper scripts
 .claude/                Claude Code config — thin shim of symlinks into .alice/
@@ -169,9 +169,7 @@ The project ships a small, project-local set of skills under `.alice/skills/` (s
 | Import real-browser cookies for authed QA | `setup-browser-cookies` |
 | Pre-landing PR / diff review | `review` |
 | Pre-implementation architecture review | `plan-eng-review` |
-| Adversarial fresh-context review of an in-flight non-trivial decision before it stands — distinct from `/review` (post-hoc) | `doubt-driven-development` |
-| Cite official docs before calling a framework / library / third-party API whose shape you're not 100% sure of | `source-driven-development` |
-| Security audit — secrets, dependencies, CI/CD, OWASP, LLM trust | `security-audit` |
+| Security audit — opt-in or high-risk release check for auth, payments, PII, secrets, CI/CD, dependencies, external integrations, OWASP, LLM trust | `security-audit` |
 | Multi-source research with citations — web synthesis, competitive / market / tech scan | `research` |
 | Pull the latest alice framework into `.alice/` (sync skills, commands, agents, migrations) | `/sync` (`.alice/commands/sync.md`) |
 | Slice a large branch / PR into a chain of smaller reviewable PRs with a migration PR first, parallel-safe siblings, and a per-PR review gate | `/pr-slicer` |

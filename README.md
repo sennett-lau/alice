@@ -27,7 +27,7 @@ A cohesive **agent SOP** for any codebase:
 - **Ledger** — append-only decisions + post-feature retros + bug patterns.
 - **Rules** — seven binding rules covering docs layout, doc updates, spec-required, implementation quality, test discipline, post-feature retro, sub-agent orchestration.
 - **Templates** — overview / spec / decision / implementation starters.
-- **Skills** — `/plan`, `/qa`, `/browse`, `/review`, `/plan-eng-review`, `/investigate`, `/setup-browser-cookies`, `/security-audit`, `/research`, `/pr-slicer`, `/diana` (end-to-end SOP runner), `/hugh` (parallel diana fan-out across worktrees), `doubt-driven-development` (adversarial fresh-context review of in-flight decisions), `source-driven-development` (cite official docs before calling third-party APIs). Each writes state to `<project-root>/.alice/mem/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`. Every skill follows a shared authoring contract — see `framework/skills/README.md`.
+- **Skills** — `/plan`, `/qa`, `/browse`, `/review`, `/plan-eng-review`, `/investigate`, `/setup-browser-cookies`, `/security-audit`, `/research`, `/pr-slicer`, `/diana` (end-to-end SOP runner), `/hugh` (parallel diana fan-out across worktrees). Each writes state to `<project-root>/.alice/mem/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`. Every skill follows a shared authoring contract — see `framework/skills/README.md`.
 - **References** — harness-agnostic reference catalogs adopters and skills can link to. Currently: `orchestration-patterns.md` (5 endorsed multi-agent shapes + 4 anti-patterns; pairs with the `sub-agent-orchestration` rule).
 - **Upgrade path** — `/sync` pulls the latest alice into the adopter's `.alice/`. Classifies every changed file into four tiers (safe add / clean update / local conflict / structural migration), walks the user through each, and stamps `.alice/VERSION`. Never auto-commits. Full flow: `framework/commands/sync.md`; structural migrations documented under `framework/migrations/`.
 - **Sub-agents** — `code-reviewer`, `security-reviewer`, `silent-failure-hunter`, `refactor-cleaner`, `seo-specialist`, `wiki-maintainer`, `pr-slicer-executor`. Invoked automatically during the SOP, or delegated into by skills. Stack-agnostic (except `seo-specialist`, which self-gates to web-facing projects); see `template/CLAUDE.md` "Agent routing" for invocation rules.
@@ -78,8 +78,7 @@ alice/
                                   /qa, /browse, /review, /plan-eng-review,
                                   /investigate, /setup-browser-cookies,
                                   /security-audit, /research, /pr-slicer,
-                                  /diana, /hugh, doubt-driven-development,
-                                  source-driven-development
+                                  /diana, /hugh
     agents/                       code-reviewer, security-reviewer,
                                   silent-failure-hunter, refactor-cleaner,
                                   seo-specialist, wiki-maintainer,
