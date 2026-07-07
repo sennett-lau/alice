@@ -85,6 +85,12 @@ This is a different knob from diana/hugh's `--effort=low|medium|high|max` flag e
 
 **Never hardcode a dated/versioned model snapshot.** Use the runtime's live alias or tier knob instead — e.g. Claude Code's bare `haiku`/`sonnet`/`opus`/`fable` aliases resolve to whatever snapshot is current, so the mapping keeps working as vendors ship new models under the same name. Concrete per-runtime mappings live in `framework/references/model-tiers.md` — that file is expected to go stale as vendors rename things; update it, not this rule.
 
+### Never re-tier by switching the main session's own model
+
+If a step wants a cheaper or stronger tier than what the main session is currently running, **dispatch a sub-agent already pinned to that tier** — don't flip the main session's own `model`/`effort` setting to chase it. Changing the running session's model mid-task risks context-window/prompt-cache inconsistency and can trigger an unwanted compaction; a freshly-dispatched sub-agent gets its own clean context at the right tier with none of that risk.
+
+This is why a mechanical step like drafting a commit message is a good light-tier sub-agent candidate — it's read-mostly, cheaply verified, and disposable if the dispatch is imperfect. **This does not extend to `git push` or other remote side-effects.** Those stay in the main session regardless of tier, per the permission policy above ("executors that should never push to remote") and `pr-slicer-executor`'s existing contract ("Does NOT push... main session owns remote side-effects") — that carve-out exists for human-supervision/trust reasons, not compute cost, and tiering doesn't override it.
+
 ## How to apply
 
 Skills that dispatch sub-agents reference this rule in their orchestration section rather than re-documenting it. The skill's job is to implement the polling + escalation mechanics; this rule defines the policy the mechanics must satisfy.
