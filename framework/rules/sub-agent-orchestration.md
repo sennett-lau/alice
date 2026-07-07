@@ -63,6 +63,28 @@ Common phrases in a sub-agent handback that indicate a permission block the agen
 
 Any of these in the handback → treat as a `BLOCKED:` signal even if the agent didn't use the exact protocol word. Escalate to the user.
 
+## Model tier selection
+
+Sub-agents don't all need the same compute budget. A mechanical, low-stakes task (drafting a commit message, syncing a wiki page, executing a pre-approved file move) wastes money and time on a top-tier model; a high-stakes judgment call (security review, adversarial verification, evaluating whether a fix actually resolved an issue) is where a weaker model's mistakes are most expensive. Route each dispatch to one of three tiers based on the task's **stakes and ambiguity — not its length**:
+
+- **light** — mechanical, low-risk, cheaply-checked output.
+- **standard** — everyday reasoning. The default; most agents belong here.
+- **heavy** — high-stakes judgment: security-sensitive review, adversarial verification, architecture/design tradeoffs, ambiguous synthesis. Wrong output here is expensive — it ships a vuln, misses a real bug, or wastes a review cycle.
+
+Pick the tier when the agent is defined (frontmatter, for a reusable persona) or at dispatch time (call-site `model` param, for one-off `general-purpose` spawns — e.g. the adversarial `general-purpose` dispatches in `diana` and `pr-slicer`).
+
+Each tier bundles two knobs, not one: **which model** runs (the axis above) and **how hard it reasons** — a separate dial most runtimes expose (Claude Code: `effort:` frontmatter, `low`/`medium`/`high`/`xhigh`/`max`/`auto`; Codex: `model_reasoning_effort`, `minimal`→`xhigh`). Picking a tier should set both automatically so callers don't have to reason about two axes for every dispatch:
+
+- **light** → cheap model, `low` effort.
+- **standard** → no override on either knob — inherit the session's model and its default reasoning depth.
+- **heavy** → strong model, `high` effort, escalate to `xhigh` for the single hardest-stakes agent when a skill has more than one heavy-tier dispatch to compare (e.g. a security-focused pass vs. a general one).
+
+Alice clamps effort to **`low`–`xhigh`** and doesn't use the ends of either runtime's native range: not Codex's `minimal` (no equivalent floor on Claude Code, so the shared scale can't rely on it), and not Claude Code's `max` (unbounded token spend, session-scoped only per Claude Code's own docs — it doesn't persist in frontmatter the way `low`/`medium`/`high`/`xhigh` do, so it's not a stable thing to pin on a reusable agent). This is a deliberate, alice-specific choice for portability across runtimes — not a hard ceiling either runtime imposes.
+
+This is a different knob from diana/hugh's `--effort=low|medium|high|max` flag even though some level names overlap — that flag picks *workflow depth* (which SOP steps run), this one picks *reasoning depth* (how hard a given model thinks on a given step). Don't conflate them; a diana run at `--effort=low` can still dispatch a heavy-tier, `xhigh`-reasoning security review for the one step that needs it.
+
+**Never hardcode a dated/versioned model snapshot.** Use the runtime's live alias or tier knob instead — e.g. Claude Code's bare `haiku`/`sonnet`/`opus`/`fable` aliases resolve to whatever snapshot is current, so the mapping keeps working as vendors ship new models under the same name. Concrete per-runtime mappings live in `framework/references/model-tiers.md` — that file is expected to go stale as vendors rename things; update it, not this rule.
+
 ## How to apply
 
 Skills that dispatch sub-agents reference this rule in their orchestration section rather than re-documenting it. The skill's job is to implement the polling + escalation mechanics; this rule defines the policy the mechanics must satisfy.
