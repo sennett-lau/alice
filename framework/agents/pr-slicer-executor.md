@@ -13,6 +13,8 @@ tools:
   - Write
   - Grep
   - Glob
+model: haiku
+effort: low
 ---
 
 # pr-slicer-executor
