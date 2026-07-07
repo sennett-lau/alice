@@ -81,6 +81,8 @@ Run state lives at `<repo>/.alice/mem/diana/<run-slug>/`. Gitignored. Every auto
 | `--resume-from` | step name (`plan`, `plan-eng-review`, `implement`, `code-review`, `pr-slicer`, `security-audit`, `retro`, `doc-update`, `drain`) | — | Force-pick the step to restart from regardless of state markers. Useful when an interrupted step left partial state diana can't safely auto-detect. |
 | `--list-runs` | — | — | Print all runs under `.alice/mem/diana/` with their status and last-updated timestamp, then stop. Use this before `--resume` to pick the right slug. |
 
+`--effort` controls workflow depth (which SOP steps run), not which model backs a sub-agent — see "Model tier selection" in `sub-agent-orchestration.md` for that separate knob.
+
 Convenience short-flags the skill also accepts:
 - `--murmur` → `--mode=murmur`
 - `--low` / `--high` / `--max` → `--effort=<level>`
@@ -162,7 +164,7 @@ To prevent murmur turning into a constant-prompt run, diana still applies the De
 `/plan-eng-review` by default runs alice's engineering-manager review prompt against the drafted spec. "Outside voice" adds one more independent pass to catch things alice's default reviewer is blind to. Pick, in order of availability:
 
 1. `codex:rescue` via the `Agent` tool (if the Codex plugin is installed) — adversarial challenge mode against the spec.
-2. A fresh `general-purpose` agent with the adversarial plan prompt. The prompt: "Read `<spec path>`. You don't know this project's history. Attack the plan: missing edge cases, hidden coupling, unjustified assumptions, missing acceptance criteria. Don't compliment. Just problems."
+2. A fresh `general-purpose` agent with the adversarial plan prompt, dispatched at the **heavy** model tier (see `framework/references/model-tiers.md`) since it has no agent-file frontmatter to pin one. The prompt: "Read `<spec path>`. You don't know this project's history. Attack the plan: missing edge cases, hidden coupling, unjustified assumptions, missing acceptance criteria. Don't compliment. Just problems."
 
 Outside voice is dispatched in parallel with alice's own `/plan-eng-review` (same assistant message, two `Agent` blocks). Diana merges the findings before deciding whether the spec is locked.
 

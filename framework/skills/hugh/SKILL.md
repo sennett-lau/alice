@@ -85,6 +85,8 @@ Run state lives at `<repo>/.alice/mem/hugh/<run-slug>/`. Gitignored. Every auton
 | `--resume-feature` | feature slug | — | With `--resume`, restart only the named feature(s) — comma-separated for multiple. Unspecified features keep their prior status. |
 | `--list-runs` | — | — | Print all runs under `.alice/mem/hugh/` with their status and last-updated timestamp, then stop. |
 
+`--effort` controls workflow depth (which SOP steps run), not which model backs a sub-agent — see "Model tier selection" in `sub-agent-orchestration.md` for that separate knob.
+
 Convenience short-flags:
 - `--murmur` → `--mode=murmur`
 - `--low` / `--high` / `--max` → `--effort=<level>`

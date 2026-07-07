@@ -496,7 +496,7 @@ Per-slice review is narrow by design. Before the **final implementation PR** (St
 2. Dispatch via `Agent` tool — pick one available:
    - **`codex:rescue`** subagent (if the Codex plugin is installed) — adversarial challenge mode.
    - Otherwise the `security-audit` skill against the composed diff.
-   - Otherwise a fresh `general-purpose` agent with the adversarial prompt from the orchestration rule.
+   - Otherwise a fresh `general-purpose` agent with the adversarial prompt from the orchestration rule, dispatched at the **heavy** model tier (see `framework/references/model-tiers.md`) since it has no agent-file frontmatter to pin one.
 3. Same scope rule as per-slice review — findings about pre-existing surrounding code go to `followups.md`, not fixes.
 4. Any P0/P1 → pause, `AskUserQuestion` whether to fix in a targeted new slice before the final PR, or ship and defer.
 
