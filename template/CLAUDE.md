@@ -27,15 +27,16 @@ docs/                 project operating manual (wiki + plans + ledger)
   skills/               skill source (qa, browse, diagnosis, ouroboros, review, plan-eng-review, investigate, research, ...)
   agents/               sub-agent source (code-reviewer, security-reviewer, user-testing-validator, findings-triager, resolution-evaluator, ...)
   bin/                  alice-* helper scripts
-.claude/                Claude Code config — thin shim of symlinks into .alice/
-  _alice      -> ../.alice
-  rules       -> ../.alice/rules
-  templates   -> ../.alice/templates
-  commands    -> ../.alice/commands
-  references  -> ../.alice/references
-  skills/<name> -> ../../.alice/skills/<name>
-  agents/<name> -> ../../.alice/agents/<name>
+.claude/                Claude Code config — real dirs of per-item symlinks into .alice/, plus this repo's own additions
+  rules/<name>.md       -> ../../.alice/rules/<name>.md
+  templates/<name>.md   -> ../../.alice/templates/<name>.md
+  commands/<name>.md    -> ../../.alice/commands/<name>.md
+  references/<name>.md  -> ../../.alice/references/<name>.md
+  skills/<name>         -> ../../.alice/skills/<name>
+  agents/<name>.md      -> ../../.alice/agents/<name>.md
 ```
+
+**Placement rule:** framework content lives in `.alice/` (managed by `/sync` — never hand-edit or hand-add). Project-specific skills, rules, templates, commands, and agents — things that belong to THIS repo, not to alice — are real files/dirs created directly in the matching `.claude/*` dir, beside the framework symlinks.
 
 ## Stack
 
@@ -158,7 +159,7 @@ If no generation step applies, write `None — migration files are authored dire
 
 When the user's request matches a skill, invoke it via the Skill tool **before** other actions.
 
-The project ships a small, project-local set of skills under `.alice/skills/` (symlinked into `.claude/skills/`). Everything is project-scoped — skills write to `<project-root>/.alice/mem/`, never to `~/.claude/`.
+The vendored alice skill set lives under `.alice/skills/` (symlinked into `.claude/skills/`). Skills authored for THIS repo are real dirs created directly in `.claude/skills/<name>/` — never under `.alice/` (that tree is `/sync`-managed framework payload). Everything is project-scoped — skills write to `<project-root>/.alice/mem/`, never to `~/.claude/`.
 
 | Request shape | Skill |
 |---------------|-------|

@@ -120,6 +120,8 @@ Sort by semver. These define structural changes that the file-diff walk can't re
 
 Files present in `.alice/` but NOT in upstream's `framework/`. These are ambiguous — could be adopter's local additions, or something alice removed. **Do not auto-delete.** List them as informational and leave them untouched. A migration file handles genuine upstream removals.
 
+When an orphan looks like adopter-authored content (a project-specific skill, rule, template, command, or agent), remind the user it belongs in the matching `.claude/*` dir as a real file/dir — `.alice/` is sync-managed framework payload, and foreign files in it will reappear on this list every sync.
+
 **Excluded from the orphan list:** `.alice/mem/` (project-local runtime state — written by every skill, never tracked in `framework/`) and `.alice/VERSION` (provenance file owned by `/sync` itself). `/sync` must never read, write, walk, copy, or list these paths during Tier 1–3 detection.
 
 ---
@@ -173,7 +175,7 @@ Report the backup path. On any failure in Steps 5–8, point the user at this pa
 
 ## Step 5 — apply Tier 1 + Tier 2
 
-For each Tier 1 file: `cp "$SYNC_DIR/latest/framework/<path>" ".alice/<path>"` (creating parent dirs). For each new **skill dir**, also create the matching `.claude/skills/<name>` relative symlink. For each new **agent file**, create `.claude/agents/<name>.md` relative symlink.
+For each Tier 1 file: `cp "$SYNC_DIR/latest/framework/<path>" ".alice/<path>"` (creating parent dirs). Then create the matching `.claude/` shim: for each new **skill dir**, a `.claude/skills/<name>` relative symlink; for each new **agent file**, `.claude/agents/<name>.md`; for each new **rule / template / command / reference file**, the per-file symlink `.claude/<dir>/<name>.md -> ../../.alice/<dir>/<name>.md`. Skip if a real (non-symlink) entry already occupies the name — that's adopter content; surface the collision instead of overwriting.
 
 For each Tier 2 file: same `cp`. No symlink changes needed — symlinks for Tier 2 files already exist.
 
@@ -226,7 +228,9 @@ Sanity pass, idempotent:
 
 - For every dir under `.alice/skills/`, ensure `.claude/skills/<name>` exists as a relative symlink to `../../.alice/skills/<name>`.
 - For every file under `.alice/agents/`, ensure `.claude/agents/<name>.md` exists as a relative symlink to `../../.alice/agents/<name>.md`.
-- Ensure `.claude/rules`, `.claude/templates`, `.claude/commands`, `.claude/references`, `.claude/_alice` symlinks exist and point at `../.alice/*`.
+- For every file under `.alice/rules/`, `.alice/templates/`, `.alice/commands/`, `.alice/references/`, ensure the per-file symlink `.claude/<dir>/<name>.md -> ../../.alice/<dir>/<name>.md` exists (each `.claude/<dir>` is a real directory).
+- Never replace a real (non-symlink) entry — that's adopter-authored project content; report the collision and leave it.
+- If any of `.claude/rules|templates|commands|references` is still a whole-dir symlink, or `.claude/_alice` exists, the adopter is on a pre-1.4.1 layout — do not patch it here; the v1.4.1 Tier 4 migration converts it.
 
 Print a summary of added/unchanged symlinks. Do **not** delete symlinks pointing at files that no longer exist in `.alice/` — that's a Tier 4 concern (migration file should document the removal).
 

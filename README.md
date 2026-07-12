@@ -99,20 +99,21 @@ can point at the same `.alice/` payload over time.
 ```
 target-repo/
   .alice/                  framework payload (rules, templates, commands, references, skills, agents, bin)
-  .claude/                 Claude Code config — thin shim of symlinks into .alice/
-    _alice      -> ../.alice
-    rules       -> ../.alice/rules
-    templates   -> ../.alice/templates
-    commands    -> ../.alice/commands
-    references  -> ../.alice/references
-    skills/<name> -> ../../.alice/skills/<name>
-    agents/<name> -> ../../.alice/agents/<name>
+  .claude/                 Claude Code config — real dirs holding per-item symlinks into .alice/
+    rules/<name>.md       -> ../../.alice/rules/<name>.md
+    templates/<name>.md   -> ../../.alice/templates/<name>.md
+    commands/<name>.md    -> ../../.alice/commands/<name>.md
+    references/<name>.md  -> ../../.alice/references/<name>.md
+    skills/<name>         -> ../../.alice/skills/<name>
+    agents/<name>.md      -> ../../.alice/agents/<name>.md
   .codex/  (optional)      future Codex / other-agent config can symlink the same way
   docs/                    project operating manual scaffolded from alice
   CLAUDE.md                project briefing scaffolded from alice's template
 ```
 
 The framework payload is **agent-agnostic** and lives once at `.alice/`. Each agent's config dir (`.claude/`, `.codex/`, `.agents/`, …) is a thin shim that points into `.alice/`. Skills themselves are still Claude-Code-specific (they use `allowed-tools`, hook semantics, etc.), but the docs/rules/templates parts are reusable by any agent that can read markdown.
+
+The `.claude/*` dirs are **real directories** containing per-item symlinks, not whole-dir symlinks. That leaves room for the project's own content: a repo-specific skill, rule, or command is a real file/dir dropped beside the framework symlinks (e.g. `.claude/skills/my-project-skill/`). `.alice/` is sync-managed framework payload — never hand-add project content there.
 
 ## Layout
 
