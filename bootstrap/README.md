@@ -14,12 +14,15 @@ target-repo/
   .gitignore                                     (.alice/mem/ appended if missing)
   .alice/                                        framework payload — vendored copy of alice/framework/
     rules/  templates/  commands/  references/  skills/  agents/  bin/
-  .claude/                                       Claude Code config — relative symlinks into .alice/
-    _alice      -> ../.alice                     (legacy/convenience path)
-    rules       -> ../.alice/rules
-    templates   -> ../.alice/templates
-    commands    -> ../.alice/commands
-    references  -> ../.alice/references
+  .claude/                                       Claude Code config — real dirs of relative symlinks into .alice/
+    rules/
+      <name>.md                 -> ../../.alice/rules/<name>.md        (one per file under .alice/rules/)
+    templates/
+      <name>.md                 -> ../../.alice/templates/<name>.md    (one per file under .alice/templates/)
+    commands/
+      <name>.md                 -> ../../.alice/commands/<name>.md     (one per file under .alice/commands/)
+    references/
+      <name>.md                 -> ../../.alice/references/<name>.md   (one per file under .alice/references/)
     skills/
       browse                      -> ../../.alice/skills/browse
       diagnosis                   -> ../../.alice/skills/diagnosis
@@ -55,6 +58,8 @@ target-repo/
 
 Why the split: `.alice/` is **agent-agnostic** — plain markdown that any agent can read. `.claude/` is the Claude-Code-specific shim (skill frontmatter uses `allowed-tools`, hook semantics, etc.). When wiring `.codex/` or `.agents/` later, point their rule/template/command dirs at `.alice/` the same way — no second copy of the framework.
 
+Why per-item symlinks (not whole-dir symlinks): every `.claude/*` dir is a **real directory** whose framework entries are symlinks into `.alice/`. This leaves room for **project-specific content** — a skill, rule, template, command, or agent that belongs to the target repo (not to alice) is created as a real file/dir directly in the matching `.claude/*` dir, beside the symlinks. Never add project content under `.alice/` — that tree is the vendored framework payload, owned by `/sync`; anything foreign in it shows up as an orphan on every future sync.
+
 `.alice/` is always vendored as a real directory copy. The target repo is fully self-contained — alice's checkout (or its temp clone) can be deleted after bootstrap.
 
 ---
@@ -87,21 +92,22 @@ If alice's root `VERSION` file is missing, or the upstream URL cannot be determi
 
 ### 2. Wire `.claude/` shims into `.alice/`
 
-Create `<target>/.claude/skills/` and `<target>/.claude/agents/` if missing.
+Create these **real directories** if missing: `<target>/.claude/rules/`, `.claude/templates/`, `.claude/commands/`, `.claude/references/`, `.claude/skills/`, `.claude/agents/`. If any already exists as a whole-dir symlink (a pre-1.4.1 layout), STOP and surface it — the v1.4.1 migration converts it; don't overwrite.
 
 Then create these **relative** symlinks (skip any that already exist — surface them):
 
 | Symlink | Target |
 |---|---|
-| `.claude/_alice` | `../.alice` |
-| `.claude/rules` | `../.alice/rules` |
-| `.claude/templates` | `../.alice/templates` |
-| `.claude/commands` | `../.alice/commands` |
-| `.claude/references` | `../.alice/references` |
+| `.claude/rules/<name>.md` for each file under `.alice/rules/` | `../../.alice/rules/<name>.md` |
+| `.claude/templates/<name>.md` for each file under `.alice/templates/` | `../../.alice/templates/<name>.md` |
+| `.claude/commands/<name>.md` for each file under `.alice/commands/` | `../../.alice/commands/<name>.md` |
+| `.claude/references/<name>.md` for each file under `.alice/references/` | `../../.alice/references/<name>.md` |
 | `.claude/skills/<name>` for each dir under `.alice/skills/` | `../../.alice/skills/<name>` |
 | `.claude/agents/<name>.md` for each file under `.alice/agents/` | `../../.alice/agents/<name>.md` |
 
 Relative paths matter: it keeps the target portable. Absolute paths would break if the repo moves.
+
+**Project-specific content goes in `.claude/`, not `.alice/`.** When the target repo later grows its own skills, rules, templates, commands, or agents (things specific to that project, not part of alice), create them as real files/dirs in the matching `.claude/*` dir, beside the framework symlinks. `/sync` only manages the symlinks whose targets exist under `.alice/` — real entries are left alone.
 
 ### 3. Scaffold `docs/`
 
@@ -174,12 +180,14 @@ Adopters bootstrapped before `.alice/VERSION` existed get a fallback prompt in `
 ## Removing alice
 
 ```bash
-rm -rf .alice .claude/_alice .claude/{rules,templates,commands,references} \
-       .claude/skills/{browse,diagnosis,diana,hugh,investigate,ouroboros,plan-eng-review,pr-slicer,qa,research,review,security-audit,setup-browser-cookies} \
-       .claude/agents
+rm -rf .alice
+# drop every symlink that pointed into .alice/ (now dangling); project-owned real files survive
+find .claude -type l ! -exec test -e {} \; -delete
+# remove any .claude/* dir left empty (skips dirs still holding project content)
+rmdir .claude/{rules,templates,commands,references,skills,agents} 2>/dev/null || true
 ```
 
-`docs/` and `CLAUDE.md` stay — they're project content, not framework.
+`docs/`, `CLAUDE.md`, and any project-specific skills/rules/commands/agents you created in `.claude/` stay — they're project content, not framework.
 
 ## Troubleshooting
 
