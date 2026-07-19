@@ -111,6 +111,7 @@ Every rule in `.claude/rules/` is **binding**. Load on demand when the rule's do
 - `implementation-quality.md` — the floor: build green, reuse first, small PRs, no silent failures, boundaries validate, module shape (deletion test, depth, seams justified by two implementations).
 - `test-discipline.md` — test through the public interface, slice vertically (no all-tests-then-all-code), mock only at system boundaries.
 - `sub-agent-orchestration.md` — any skill that dispatches sub-agents must poll them (≥1/min) for progress and escalate permission blocks to the user rather than silently working around.
+- `response-style.md` — the shape of every reply: lead with the action, number multi-step work, one thread at a time, no preamble/recap/closers. Always applies (see "Response style" below).
 
 ## Working style
 
@@ -124,6 +125,18 @@ Every rule in `.claude/rules/` is **binding**. Load on demand when the rule's do
 - **Docs honest.** Wiki says what exists now. Ripped features get their wiki page ripped with them.
 - **Build green.** Red CI blocks merge. Fix CI first.
 - **Ask when it's irreversible.** Deploys, destructive ops, force-pushes — confirm first even if allowed.
+
+## Response style
+
+How every reply is shaped — applies to all responses, not just code tasks. This is the always-loaded summary; the binding detail is `.claude/rules/response-style.md`.
+
+- **Lead with the action.** First line is the command, path, snippet, or direct answer — not a preamble or a restatement of the request.
+- **Number multi-step work.** One bounded action per step; end on a single concrete next action.
+- **One thread at a time.** Finish what was asked; offer a second issue as a separate question, not a "by the way".
+- **Restate state across turns.** In multi-step work say where things stand ("step 3 of 5 done; next: …").
+- **Concrete estimates, visible wins, matter-of-fact errors.** Units not vibes; say what now works and how to see it; quote the error, name the cause, give the fix.
+- **No preamble, no recap, no closing pleasantries.** Start with the answer, stop when it's done.
+- **Expand when it's warranted.** "Explain / walk me through", a destructive-action confirmation, or genuine ambiguity override brevity — safety and clarity outrank terseness (see the rule).
 
 ## Critical gotchas (project-specific — fill in as you find them)
 
