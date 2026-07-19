@@ -65,7 +65,7 @@ A cohesive **agentic operating system** for any codebase:
 - **Wiki** — the auto-loaded "what exists today" knowledge base.
 - **Plans** — per-feature folders with spec → review → implement → ship lifecycle.
 - **Ledger** — append-only decisions + post-feature retros + bug patterns.
-- **Rules** — seven binding rules covering docs layout, doc updates, spec-required, implementation quality, test discipline, post-feature retro, sub-agent orchestration.
+- **Rules** — eight binding rules covering docs layout, doc updates, spec-required, implementation quality, test discipline, post-feature retro, sub-agent orchestration, response style.
 - **Templates** — overview / spec / decision / implementation starters.
 - **Skills** — project-local workflows for planning, review, QA, diagnosis, research, security, parallel implementation, and iterative improvement. Each writes state to `<project-root>/.alice/mem/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`. Every skill follows a shared authoring contract — see `framework/skills/README.md`.
 - **References** — harness-agnostic reference catalogs adopters and skills can link to. Currently: `orchestration-patterns.md` (5 endorsed multi-agent shapes + 4 anti-patterns; pairs with the `sub-agent-orchestration` rule).
@@ -124,7 +124,7 @@ alice/
   bootstrap/
     README.md                     adoption recipe — the agent reads this and executes the steps
   framework/                      ships to adopter's .alice/
-    rules/                        7 binding rules
+    rules/                        8 binding rules
     templates/                    overview / spec / decision / implementation / todo
     commands/                     /plan, /sync commands
     references/                   harness-agnostic reference catalogs
@@ -176,6 +176,7 @@ Alice is a framework, not an app. Updates are rare and surgical. The rules:
 
 - [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills)
 - [andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)
+- [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd)
 - [everything-claude-code](https://github.com/affaan-m/everything-claude-code)
 - [graphify](https://github.com/safishamsi/graphify)
 - [gstack](https://github.com/garrytan/gstack)
