@@ -1,7 +1,7 @@
 ---
 name: investigate
 preamble-tier: 2
-version: 1.0.1
+version: 1.0.2
 description: |
   Systematic debugging with root cause investigation. Four phases: investigate,
   analyze, hypothesize, implement. Iron Law: no fixes without root cause.
@@ -76,7 +76,7 @@ Errors compound. A bug in step N that goes unfixed makes steps N+1..N+5 wrong. T
 If the OpenAI Codex plugin is installed and `codex:rescue` subagent is available, delegate deep root-cause passes to it when:
 
 - You're stuck after Phase 1–2 (hypothesis forms but evidence keeps contradicting).
-- The bug spans chains or touches a primitive you haven't worked with recently.
+- The bug spans multiple modules or services, or touches a primitive you haven't worked with recently.
 - You've fixed the symptom once before and it's back — you need a fresh pair of eyes.
 
 Invoke via the Agent tool with `subagent_type: "codex:rescue"`. Brief it with the symptom, what you've ruled out, and exact file:line references. Treat its report as a second opinion, not gospel — reconcile with your own evidence.
@@ -115,6 +115,8 @@ Gather context before forming any hypothesis.
 
 After forming your root cause hypothesis, lock edits to the affected module to prevent scope creep.
 
+Alice does not ship a `freeze` skill — this hook is opt-in. If the project provides its own scope-freeze skill beside this one, use it:
+
 ```bash
 [ -x "${CLAUDE_SKILL_DIR}/../freeze/bin/check-freeze.sh" ] && echo "FREEZE_AVAILABLE" || echo "FREEZE_UNAVAILABLE"
 ```
@@ -147,7 +149,7 @@ Check if this bug matches a known pattern:
 | State corruption | Inconsistent data, partial updates | Transactions, callbacks, hooks |
 | Integration failure | Timeout, unexpected response | External API calls, service boundaries |
 | Configuration drift | Works locally, fails in staging/prod | Env vars, feature flags, DB state |
-| Stale cache | Shows old data, fixes on cache clear | Redis, CDN, browser cache, Turbo |
+| Stale cache | Shows old data, fixes on cache clear | Cache store, CDN, browser cache, framework cache layer |
 
 Also check:
 - `docs/todos/overview.md` for related known issues

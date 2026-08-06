@@ -1,7 +1,7 @@
 ---
 name: setup-browser-cookies
 preamble-tier: 1
-version: 1.0.1
+version: 1.0.2
 description: |
   Import cookies from your real Chromium browser into the headless browse session.
   Opens an interactive picker UI where you select which cookie domains to import.
@@ -59,11 +59,7 @@ If `CDP_MODE=true`: tell the user "Not needed — you're connected to your real 
 3. User selects which cookie domains to import in their browser
 4. Cookies are decrypted and loaded into the Playwright session
 
-### Steps
-
-### 1. Find the browse binary
-
-### SETUP (run this check BEFORE any browse command)
+### 1. Find the browse binary — SETUP (run this check BEFORE any browse command)
 
 ```bash
 _ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
@@ -105,10 +101,10 @@ Tell the user: **"Cookie picker opened — select the domains you want to import
 If the user specifies a domain directly (e.g., `/setup-browser-cookies github.com`), skip the UI:
 
 ```bash
-$B cookie-import-browser comet --domain github.com
+$B cookie-import-browser chrome --domain github.com
 ```
 
-Replace `comet` with the appropriate browser if specified.
+Replace `chrome` with whichever installed Chromium browser the user specified.
 
 ### 4. Verify
 

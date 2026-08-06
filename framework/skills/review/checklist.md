@@ -60,9 +60,9 @@ Be terse. For each issue: one line describing the problem, one line with the fix
 #### Enum & Value Completeness
 When the diff introduces a new enum value, status string, tier name, or type constant:
 - **Trace it through every consumer.** Read (don't just grep — READ) each file that switches on, filters by, or displays that value. If any consumer doesn't handle the new value, flag it. Common miss: adding a value to the frontend dropdown but the backend model/compute method doesn't persist it.
-- **Check allowlists/filter arrays.** Search for arrays or `%w[]` lists containing sibling values (e.g., if adding "revise" to tiers, find every `%w[quick lfg mega]` and verify "revise" is included where needed).
+- **Check allowlists/filter arrays.** Search for array literals containing sibling values (e.g., if adding "enterprise" to tiers, find every `["basic", "pro"]` / `%w[basic pro]` and verify "enterprise" is included where needed).
 - **Check `case`/`if-elsif` chains.** If existing code branches on the enum, does the new value fall through to a wrong default?
-To do this: use Grep to find all references to the sibling values (e.g., grep for "lfg" or "mega" to find all tier consumers). Read each match. This step requires reading code OUTSIDE the diff.
+To do this: use Grep to find all references to the sibling values (e.g., grep for "basic" or "pro" to find all tier consumers). Read each match. This step requires reading code OUTSIDE the diff.
 
 ### Pass 2 — INFORMATIONAL
 
@@ -102,9 +102,9 @@ To do this: use Grep to find all references to the sibling values (e.g., grep fo
 - Security enforcement features (blocking, rate limiting, auth) without integration tests verifying the enforcement path works end-to-end
 
 #### Completeness Gaps
-- Shortcut implementations where the complete version would cost <30 minutes CC time (e.g., partial enum handling, incomplete error paths, missing edge cases that are straightforward to add)
-- Options presented with only human-team effort estimates — should show both human and Claude Code time
-- Test coverage gaps where adding the missing tests is a "lake" not an "ocean" (e.g., missing negative-path tests, missing edge case tests that mirror happy-path structure)
+- Shortcut implementations where the complete version would cost the agent <30 minutes (e.g., partial enum handling, incomplete error paths, missing edge cases that are straightforward to add)
+- Options presented with only human-team effort estimates — should show both human and agent time
+- Test coverage gaps where adding the missing tests is a small bounded effort, not an open-ended one (e.g., missing negative-path tests, missing edge case tests that mirror happy-path structure)
 - Features implemented at 80-90% when 100% is achievable with modest additional code
 
 #### Crypto & Entropy
@@ -117,7 +117,7 @@ To do this: use Grep to find all references to the sibling values (e.g., grep fo
 - Mismatched time windows between related features — one uses hourly buckets, another uses daily keys for the same data
 
 #### Type Coercion at Boundaries
-- Values crossing Ruby→JSON→JS boundaries where type could change (numeric vs string) — hash/digest inputs must normalize types
+- Values crossing server→JSON→client boundaries (e.g. Ruby→JSON→JS) where type could change (numeric vs string) — hash/digest inputs must normalize types
 - Hash/digest inputs that don't call `.to_s` or equivalent before serialization — `{ cores: 8 }` vs `{ cores: "8" }` produce different hashes
 
 #### View/Frontend
@@ -214,6 +214,6 @@ the fix, it's ASK.
 - Suggesting consistency-only changes (wrapping a value in a conditional to match how another constant is guarded)
 - "Regex doesn't handle edge case X" when the input is constrained and X never occurs in practice
 - "Test exercises multiple guards simultaneously" — that's fine, tests don't need to isolate every guard
-- Eval threshold changes (max_actionable, min scores) — these are tuned empirically and change constantly
+- Empirically tuned threshold constants (scoring cutoffs, limits, minimum scores) — these change constantly during tuning
 - Harmless no-ops (e.g., `.reject` on an element that's never in the array)
 - ANYTHING already addressed in the diff you're reviewing — read the FULL diff before commenting
