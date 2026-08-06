@@ -224,6 +224,34 @@ For each migration file, in semver order:
 
 ---
 
+## Step 7.5 — first-run agentic-readiness offer
+
+After migrations complete (this step also runs when there were no Tier 4 migrations), check whether the adopter has ever run the `agentic-readiness` review:
+
+```bash
+[ -f .alice/mem/agentic-readiness.json ] && echo "ALREADY_RUN" || echo "NEVER_RUN"
+[ -d .alice/skills/agentic-readiness ] && echo "SKILL_PRESENT" || echo "SKILL_ABSENT"
+```
+
+Skip this step silently when the marker exists (`ALREADY_RUN`) or the skill is not vendored (`SKILL_ABSENT`).
+
+On `NEVER_RUN` + `SKILL_PRESENT`, offer — never force — via `AskUserQuestion`:
+
+```
+This repo has never had an agentic-readiness review — a one-time assessment of
+how well a coding agent can operate this project (auth/UI/data/CI parity, tests,
+parallel dev servers, observability, the end-to-end bug loop). It writes a
+scorecard + improvement suggestions to docs/wiki/agentic-readiness/ and lets you
+triage each suggestion. Run it after this sync completes?
+
+A) Yes — run /agentic-readiness after the sync report
+B) Not now — you can run /agentic-readiness anytime
+```
+
+Record the answer and continue the sync either way. Do **not** run the review mid-sync — it writes to `docs/wiki/` and `.alice/mem/`, which is outside `/sync`'s write boundary; if accepted, it runs after Step 11's final report as its own follow-on action.
+
+---
+
 ## Step 8 — refresh `.claude/` shims
 
 Sanity pass, idempotent:
@@ -319,6 +347,8 @@ Changes staged — review with `git status` / `git diff`, commit when ready.
 ```
 
 Do **not** commit. Do **not** push. Adopter owns their git story.
+
+If the user accepted the Step 7.5 offer, invoke the `agentic-readiness` skill now — after this report, as its own action outside the sync. Its writes (`docs/wiki/agentic-readiness/`, `.alice/mem/agentic-readiness.json`) belong to the skill, not to the sync changeset.
 
 If any step failed partway, do not produce this report — point the user at the backup and exit with an error explanation.
 
