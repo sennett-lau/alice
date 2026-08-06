@@ -1,7 +1,7 @@
 ---
 name: pr-slicer
 preamble-tier: 4
-version: 1.0.1
+version: 1.0.2
 description: |
   Slice a large working branch / PR into a chain of smaller, reviewable PRs.
   Detects adopter-declared migration-class files (forces a migration PR
@@ -238,7 +238,7 @@ migration/<...>   ──┬── slice/<slug>-02-shared-types ──┬── s
 | 01 | migration/... | main | — | no | — | — | spec/01-migration.md |
 | 02 | slice/...-02-shared-types | migration/... | 01 | no | — | — | spec/02-shared-types.md |
 
-(The `Review` column is updated in Step 6c.5 — values: `clean`, `fixed`, `pushed-with-findings`, `deferred-only`.)
+(The `Review` column is updated in Step 6e — values: `clean`, `fixed`, `pushed-with-findings`, `deferred-only`.)
 
 ## Rebase / base-update playbook
 
@@ -318,7 +318,7 @@ Mode (`sequential` | `parallel`) was resolved in Step 1. Default is `sequential`
 
 **All sub-agent dispatch in this step must follow `.alice/rules/sub-agent-orchestration.md`** — poll ≥1/min for background executors, escalate silence via `AskUserQuestion`, never silently kill an agent. See the rule file for full policy.
 
-- **`sequential`:** dispatch one executor at a time, in topological order of `depends_on`. Same working tree. Wait for handback + Step 6c.5 review + push before dispatching the next. Ignore worktrees entirely.
+- **`sequential`:** dispatch one executor at a time, in topological order of `depends_on`. Same working tree. Wait for handback (6d) + review gate (6e) + push (6f) before dispatching the next. Ignore worktrees entirely.
 - **`parallel`:** compute the ready set (all PRs whose `depends_on` is empty or satisfied). Every PR in the ready set that is parallel-safe with its siblings (same `base`, no mutual dep) gets its own worktree and is dispatched in the **same assistant message** (multiple `Agent` blocks → concurrent). Non-parallel-safe PRs in the ready set still serialize.
 
 For each PR in `PRS[]`, respecting `depends_on`:
@@ -389,7 +389,7 @@ If any executor reports a non-permission blocker (e.g. build fails, missing dep)
 
 The executor's self-check is **mechanical** — build green, tests green, in-scope-only, no gotchas. It is NOT a substitute for a real review pass. That happens next.
 
-### 6c.5. Per-PR review gate (the point of slicing)
+### 6e. Per-PR review gate (the point of slicing)
 
 Smaller PRs exist so each one can be **actually reviewed**. Run a focused review pass on every slice before pushing. Do this even if the source branch was already reviewed — slicing can shuffle intent and introduce copy-paste errors.
 
@@ -461,7 +461,7 @@ Smaller PRs exist so each one can be **actually reviewed**. Run a focused review
 
 5. **Collect deferrable findings** into `$PLAN_DIR/followups.md` as they accrue — one section per slice, each entry with file:line, severity, source (review finding / adjacent observation), and suggested action. This file seeds the follow-up PR in Step 9.
 
-### 6d. Push + open PR
+### 6f. Push + open PR
 
 For each completed chunk:
 
@@ -472,7 +472,7 @@ gh pr create --base <base> --head <branch> --title "<title>" --body-file <spec p
 
 Record PR number back into `overview.md`.
 
-### 6e. Rebase cascade
+### 6g. Rebase cascade
 
 When the user merges a dependency (out-of-band), for each dependent PR:
 
@@ -556,7 +556,7 @@ If `followups.md` is empty: skip entirely.
 - A slice PR that includes both code changes and migration changes.
 - Executor agent frontmatter that includes `gh` or any push-capable tool.
 - Background executors dispatched without an attached polling loop.
-- A `.done` step marker without the corresponding PR URL captured.
+- A slice recorded as complete in run state without its PR URL captured.
 - Follow-up findings landing in `docs/todos/overview.md` without the matching slice metadata.
 - A slice PR landing before its declared dependencies.
 - Worktrees still on disk for slices that already merged.
