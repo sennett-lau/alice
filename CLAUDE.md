@@ -19,6 +19,7 @@ alice/
     rules/                 8 binding rules (ship to adopter at .alice/rules/)
     templates/             overview / spec / decision / implementation / todo
     commands/              /plan + /sync commands (ship to adopter at .alice/commands/)
+    references/            harness-agnostic reference catalogs (ship to adopter at .alice/references/)
     skills/<name>/         skill sources — ship to adopter at .alice/skills/<name>/
     agents/<name>.md       sub-agent sources — ship to adopter at .alice/agents/<name>.md
     migrations/<ver>.md    per-version structural migration notes (read by /sync)
