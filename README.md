@@ -52,6 +52,7 @@ After Alice is adopted into a repo, most work starts from one of these paths.
 - `/investigate` — chase bugs, regressions, stack traces, and broken behavior to root cause.
 - `/research` — source-grounded research with citations.
 - `/pr-slicer` — split large branches into reviewable PR slices.
+- `/agentic-readiness` — score how well a coding agent can operate the project like a human developer, write improvement suggestions into `docs/wiki/agentic-readiness/`, and triage them into work or TODOs.
 
 **Utilities**
 
@@ -136,7 +137,7 @@ alice/
                                   /qa, /diagnosis, /ouroboros, /browse, /review, /plan-eng-review,
                                   /investigate, /setup-browser-cookies,
                                   /security-audit, /research, /pr-slicer,
-                                  /diana, /hugh
+                                  /diana, /hugh, /agentic-readiness
     agents/                       code-reviewer, security-reviewer,
                                   user-testing-validator, findings-triager,
                                   resolution-evaluator,

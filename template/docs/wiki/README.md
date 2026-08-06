@@ -22,6 +22,7 @@ Only when a concern becomes real. Guidelines:
 - External integration locks → `integrations/<name>.md`
 - Design system stabilizes → `design-handoff.md`
 - Testing approach solidifies → `testing-strategy.md`
+- `/agentic-readiness` review runs → `agentic-readiness/` (scorecard `overview.md` + one page per improvement suggestion; created and updated by the skill, not by hand — index only its `overview.md`)
 
 Speculative wiki pages rot. Don't add scaffolding for work that isn't happening.
 
