@@ -1,5 +1,4 @@
 ---
-version: 1.6.0
 affects: [framework, template/docs, template/CLAUDE.md]
 ---
 
@@ -7,7 +6,7 @@ affects: [framework, template/docs, template/CLAUDE.md]
 
 Adds the `agentic-readiness` skill — an on-demand review of how well a coding agent can operate your project the way a human developer can (auth/UI/data/CI parity, testing foundation, parallel dev servers, observability access, the end-to-end bug loop), calibrated to your product type. A run writes a dated scorecard plus one page per improvement suggestion into `docs/wiki/agentic-readiness/` (created by the skill, never pre-seeded), triages each suggestion with you (work on it now / TODO / skip), and records the run in `.alice/mem/agentic-readiness.json`.
 
-`/sync` itself changed: a new Step 7.5 runs after Tier 4 migrations and, if `.alice/mem/agentic-readiness.json` is absent (the review has never run here), offers — never forces — to run `/agentic-readiness` after the sync report. The skill dir and updated `sync.md` land via the normal tiered file-copy; this migration exists because the sync flow is load-bearing public API and the adopter-owned `CLAUDE.md` / `docs/wiki/README.md` need small manual merges.
+`/sync` itself changed: a new Step 7.5 runs after Tier 4 migrations and, if `.alice/mem/agentic-readiness.json` is absent (the review has never run here), offers — never forces — to run `/agentic-readiness` after the sync report. The skill dir and updated `sync.md` land via the normal tiered file-copy; these migration notes exist because the sync flow is load-bearing public API and the adopter-owned `CLAUDE.md` / `docs/wiki/README.md` need small manual merges.
 
 ## Automatic actions
 
