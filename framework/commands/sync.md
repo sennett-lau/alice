@@ -289,11 +289,12 @@ Runs after all sync mechanics are done — it never blocks the version stamp, an
 
 Read the catalog at `$SYNC_DIR/latest/framework/recommendations/README.md` (the fresh clone — always the newest catalog; the contract at its top is binding). If the file doesn't exist upstream, skip this step.
 
-1. Load `.alice/mem/recommendations.json` if present. Entries with status `installed` or `declined` are settled — skip them, no re-asking. Entries `pending` or absent are open.
+1. Load `.alice/mem/recommendations.json` if present. Entries with status `installed`, `declined`, or `already-present` are settled — skip them, no re-asking. Entries `pending` or absent are open.
 2. Evaluate each open entry's **Condition** against the adopter repo (read the manifests/files the condition names). Collect the matches.
-3. If any match, present them in one `AskUserQuestion`: name, the catalog's why-text, and the install method. Multi-select — any subset, and "none" is always a valid answer.
-4. Install only what was picked, following the entry's **Install (project-scoped)** steps. Everything lands inside the adopter repo — local dev dependency, repo-local config. Never a global install, never a user-home write. If a tool's own installer reaches outside the repo, skip that part and surface it.
-5. Write every decision back to `.alice/mem/recommendations.json` (schema in the catalog's "State file" section — `installed` / `declined` / `pending`, one key per entry slug).
+3. Run each match's **Detect existing** check. Detected → record `{ "status": "already-present", "decided_at": ... }` in the mem file and exclude it from the offer — the repo had it first; never install over it.
+4. If anything remains, present it in one `AskUserQuestion`, leading with any tools found already present ("Already in this repo: react-doctor"): name, the catalog's why-text, and the install method. Multi-select — any subset, and "none" is always a valid answer. If everything that matched is already present, say so and skip the prompt.
+5. Install only what was picked, following the entry's **Install (project-scoped)** steps. Everything lands inside the adopter repo — local dev dependency, repo-local config. Never a global install, never a user-home write. If a tool's own installer reaches outside the repo, skip that part and surface it.
+6. Write every decision back to `.alice/mem/recommendations.json` (schema in the catalog's "State file" section — `installed` / `declined` / `pending` / `already-present`, one key per entry slug).
 
 No open matches → skip silently and write nothing.
 
@@ -311,7 +312,7 @@ alice sync complete: v$CURRENT_VERSION → v$LATEST_VERSION
   conflicts:       K (resolved: X, skipped: Y, markers left: Z)
   migrations ran:  J
   manual items:    L (see .alice/mem/alice-sync/TODO.md)
-  recommendations: offered O, installed I, declined D
+  recommendations: offered O, installed I, declined D, already present P
 
 Backup: $SYNC_DIR/backup/
 Changes staged — review with `git status` / `git diff`, commit when ready.

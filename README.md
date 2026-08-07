@@ -168,7 +168,7 @@ See `bootstrap/README.md` for the full step-by-step recipe, the `.codex/` / `.ag
 
 ## Recommended tooling
 
-Alice ships a small catalog of third-party tools at `framework/recommendations/README.md` (vendored to `.alice/recommendations/`). At the end of a bootstrap and at the end of every `/sync`, the driving agent evaluates each entry's condition against the repo (e.g. "React-based web app"), presents the matches with a short honest why-text, and installs **only what the user picks** — always project-scoped: local dev dependency or repo-local config, never global, never user-home. Decisions persist per tool in `.alice/mem/recommendations.json` (`installed` / `declined` / `pending`), so declined tools are never offered twice. The catalog is data — adding an entry needs no change to the bootstrap or `/sync` flow.
+Alice ships a small catalog of third-party tools at `framework/recommendations/README.md` (vendored to `.alice/recommendations/`). At the end of a bootstrap and at the end of every `/sync`, the driving agent evaluates each entry's condition against the repo (e.g. "React-based web app"), presents the matches with a short honest why-text, and installs **only what the user picks** — always project-scoped: local dev dependency or repo-local config, never global, never user-home. Decisions persist per tool in `.alice/mem/recommendations.json` (`installed` / `declined` / `pending` / `already-present`), so declined tools are never offered twice — and tools the repo already carried are detected up front, recorded `already-present`, and never re-installed. The catalog is data — adding an entry needs no change to the bootstrap or `/sync` flow.
 
 ## How alice itself stays sane
 
