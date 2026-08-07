@@ -1,7 +1,7 @@
 ---
 name: plan-eng-review
 preamble-tier: 3
-version: 1.0.1
+version: 1.1.0
 description: |
   Eng manager-mode plan review. Lock in the execution plan — architecture,
   data flow, diagrams, edge cases, test coverage, performance. Walks through
@@ -119,12 +119,12 @@ Before reviewing anything, answer these questions:
 
    If WebSearch is unavailable, skip this check and note: "Search unavailable — proceeding with in-distribution knowledge only."
 
-   If the plan rolls a custom solution where a built-in exists, flag it as a scope reduction opportunity. Annotate recommendations with **[Layer 1]**, **[Layer 2]**, **[Layer 3]**, or **[EUREKA]** (see preamble's Search Before Building section). If you find a eureka moment — a reason the standard approach is wrong for this case — present it as an architectural insight.
+   If the plan rolls a custom solution where a built-in exists, flag it as a scope reduction opportunity. Annotate recommendations with the search-before-building layers — **[Layer 1]** runtime/framework built-in, **[Layer 2]** existing project dependency, **[Layer 3]** new dependency (custom code is the last resort) — or **[EUREKA]** when the search reveals the standard approach is wrong for this case. Present a eureka as an architectural insight.
 5. **TODOS cross-reference:** Read `docs/todos/overview.md` if it exists. Are any deferred items blocking this plan? Can any deferred items be bundled into this PR without expanding scope? Does this plan create new work that should be captured as a TODO?
 
-5. **Completeness check:** Is the plan doing the complete version or a shortcut? With AI-assisted coding, the cost of completeness (100% test coverage, full edge case handling, complete error paths) is 10-100x cheaper than with a human team. If the plan proposes a shortcut that saves human-hours but only saves minutes with Claude Code, recommend the complete version. Boil the lake.
+6. **Completeness check:** Is the plan doing the complete version or a shortcut? With agent-assisted coding, the cost of completeness (100% test coverage, full edge case handling, complete error paths) is 10-100x cheaper than with a human team. If the plan proposes a shortcut that saves human-hours but only saves the agent minutes, recommend the complete version.
 
-6. **Distribution check:** If the plan introduces a new artifact type (CLI binary, library package, container image, mobile app), does it include the build/publish pipeline? Code without distribution is code nobody can use. Check:
+7. **Distribution check:** If the plan introduces a new artifact type (CLI binary, library package, container image, mobile app), does it include the build/publish pipeline? Code without distribution is code nobody can use. Check:
    - Is there a CI/CD workflow for building and publishing the artifact?
    - Are target platforms defined (linux/darwin/windows, amd64/arm64)?
    - How will users download or install it (GitHub Releases, package manager, container registry)?
@@ -140,28 +140,18 @@ Always work through the full interactive review: one section at a time (Architec
 
 ### Confidence Calibration
 
-Every finding MUST include a confidence score (1-10):
+Read `.alice/references/confidence-calibration.md` and apply it to every finding: each finding carries a 1-10 confidence score, uses the `[SEVERITY] (confidence: N/10) file:line — description` format, and is displayed/suppressed per that table. Log calibration events per the reference.
 
-| Score | Meaning | Display rule |
-|-------|---------|-------------|
-| 9-10 | Verified by reading specific code. Concrete bug or exploit demonstrated. | Show normally |
-| 7-8 | High confidence pattern match. Very likely correct. | Show normally |
-| 5-6 | Moderate. Could be a false positive. | Show with caveat: "Medium confidence, verify this is actually an issue" |
-| 3-4 | Low confidence. Pattern is suspicious but may be fine. | Suppress from main report. Include in appendix only. |
-| 1-2 | Speculation. | Only report if severity would be P0. |
+### 1. Architecture review
 
-**Finding format:**
+Evaluate:
+* Overall shape of the change — components added/touched, how they connect, where the data flows.
+* Fit with the existing system design — does the plan reuse existing primitives or rebuild them? (Feeds the "What already exists" output below.)
+* Dependency direction and coupling — new cross-module dependencies, cycles, seams introduced without a second implementation.
+* Error handling and failure strategy at the architecture level — where errors surface, what degrades, what retries.
+* Migration/rollout approach — reversibility, feature flags, incremental over big-bang (apply the Cognitive Patterns above).
 
-\`[SEVERITY] (confidence: N/10) file:line — description\`
-
-Example:
-\`[P1] (confidence: 9/10) app/models/user.rb:42 — SQL injection via string interpolation in where clause\`
-\`[P2] (confidence: 5/10) app/controllers/api/v1/users_controller.rb:18 — Possible N+1 query, verify with production logs\`
-
-**Calibration learning:** If you report a finding with confidence < 7 and the user
-confirms it IS a real issue, that is a calibration event. Your initial confidence was
-too low. Log the corrected pattern as a learning so future reviews catch it with
-higher confidence.
+**STOP.** For each issue found in this section, call AskUserQuestion individually. One issue per call. Present options, state your recommendation, explain WHY. Do NOT batch multiple issues into one AskUserQuestion. Only proceed to the next section after ALL issues in this section are resolved.
 
 ### 2. Code quality review
 Evaluate:
@@ -178,160 +168,19 @@ Evaluate:
 
 100% coverage is the goal. Evaluate every codepath in the plan and ensure the plan includes tests for each one. If the plan is missing tests, add them — the plan should be complete enough that implementation includes full test coverage from the start.
 
-### Test Framework Detection
+**Run the shared coverage audit.** Read `.alice/references/coverage-audit.md` and follow it end-to-end against the plan document:
 
-Before analyzing coverage, detect the project's test framework:
+1. Detect the test framework (per the reference; skip test generation if none).
+2. Trace every codepath the plan implies — for each planned component, follow the planned execution and diagram every branch and error path.
+3. Map user flows, interaction edge cases, error states, and boundary states.
+4. Check each branch against existing tests, scoring quality with the ★ rubric, and apply the E2E/eval decision matrix.
+5. Output the ASCII coverage diagram (code paths + user flows, [→E2E]/[→EVAL] marks, COVERAGE/QUALITY/GAPS footer).
 
-1. **Read CLAUDE.md** — look for a `## Testing` section with test command and framework name. If found, use that as the authoritative source.
-2. **If CLAUDE.md has no testing section, auto-detect:**
-
-```bash
-setopt +o nomatch 2>/dev/null || true  # zsh compat
-# Detect project runtime
-[ -f Gemfile ] && echo "RUNTIME:ruby"
-[ -f package.json ] && echo "RUNTIME:node"
-[ -f requirements.txt ] || [ -f pyproject.toml ] && echo "RUNTIME:python"
-[ -f go.mod ] && echo "RUNTIME:go"
-[ -f Cargo.toml ] && echo "RUNTIME:rust"
-# Check for existing test infrastructure
-ls jest.config.* vitest.config.* playwright.config.* cypress.config.* .rspec pytest.ini phpunit.xml 2>/dev/null
-ls -d test/ tests/ spec/ __tests__/ cypress/ e2e/ 2>/dev/null
-```
-
-3. **If no framework detected:** still produce the coverage diagram, but skip test generation.
-
-**Step 1. Trace every codepath in the plan:**
-
-Read the plan document. For each new feature, service, endpoint, or component described, trace how data will flow through the code — don't just list planned functions, actually follow the planned execution:
-
-1. **Read the plan.** For each planned component, understand what it does and how it connects to existing code.
-2. **Trace data flow.** Starting from each entry point (route handler, exported function, event listener, component render), follow the data through every branch:
-   - Where does input come from? (request params, props, database, API call)
-   - What transforms it? (validation, mapping, computation)
-   - Where does it go? (database write, API response, rendered output, side effect)
-   - What can go wrong at each step? (null/undefined, invalid input, network failure, empty collection)
-3. **Diagram the execution.** For each changed file, draw an ASCII diagram showing:
-   - Every function/method that was added or modified
-   - Every conditional branch (if/else, switch, ternary, guard clause, early return)
-   - Every error path (try/catch, rescue, error boundary, fallback)
-   - Every call to another function (trace into it — does IT have untested branches?)
-   - Every edge: what happens with null input? Empty array? Invalid type?
-
-This is the critical step — you're building a map of every line of code that can execute differently based on input. Every branch in this diagram needs a test.
-
-**Step 2. Map user flows, interactions, and error states:**
-
-Code coverage isn't enough — you need to cover how real users interact with the changed code. For each changed feature, think through:
-
-- **User flows:** What sequence of actions does a user take that touches this code? Map the full journey (e.g., "user clicks 'Pay' → form validates → API call → success/failure screen"). Each step in the journey needs a test.
-- **Interaction edge cases:** What happens when the user does something unexpected?
-  - Double-click/rapid resubmit
-  - Navigate away mid-operation (back button, close tab, click another link)
-  - Submit with stale data (page sat open for 30 minutes, session expired)
-  - Slow connection (API takes 10 seconds — what does the user see?)
-  - Concurrent actions (two tabs, same form)
-- **Error states the user can see:** For every error the code handles, what does the user actually experience?
-  - Is there a clear error message or a silent failure?
-  - Can the user recover (retry, go back, fix input) or are they stuck?
-  - What happens with no network? With a 500 from the API? With invalid data from the server?
-- **Empty/zero/boundary states:** What does the UI show with zero results? With 10,000 results? With a single character input? With maximum-length input?
-
-Add these to your diagram alongside the code branches. A user flow with no test is just as much a gap as an untested if/else.
-
-**Step 3. Check each branch against existing tests:**
-
-Go through your diagram branch by branch — both code paths AND user flows. For each one, search for a test that exercises it:
-- Function `processPayment()` → look for `billing.test.ts`, `billing.spec.ts`, `test/billing_test.rb`
-- An if/else → look for tests covering BOTH the true AND false path
-- An error handler → look for a test that triggers that specific error condition
-- A call to `helperFn()` that has its own branches → those branches need tests too
-- A user flow → look for an integration or E2E test that walks through the journey
-- An interaction edge case → look for a test that simulates the unexpected action
-
-Quality scoring rubric:
-- ★★★  Tests behavior with edge cases AND error paths
-- ★★   Tests correct behavior, happy path only
-- ★    Smoke test / existence check / trivial assertion (e.g., "it renders", "it doesn't throw")
-
-### E2E Test Decision Matrix
-
-When checking each branch, also determine whether a unit test or E2E/integration test is the right tool:
-
-**RECOMMEND E2E (mark as [→E2E] in the diagram):**
-- Common user flow spanning 3+ components/services (e.g., signup → verify email → first login)
-- Integration point where mocking hides real failures (e.g., API → queue → worker → DB)
-- Auth/payment/data-destruction flows — too important to trust unit tests alone
-
-**RECOMMEND EVAL (mark as [→EVAL] in the diagram):**
-- Critical LLM call that needs a quality eval (e.g., prompt change → test output still meets quality bar)
-- Changes to prompt templates, system instructions, or tool definitions
-
-**STICK WITH UNIT TESTS:**
-- Pure function with clear inputs/outputs
-- Internal helper with no side effects
-- Edge case of a single function (null input, empty array)
-- Obscure/rare flow that isn't customer-facing
-
-### REGRESSION RULE (mandatory)
-
-**IRON RULE:** When the coverage audit identifies a REGRESSION — code that previously worked but the diff broke — a regression test is added to the plan as a critical requirement. No AskUserQuestion. No skipping. Regressions are the highest-priority test because they prove something broke.
-
-A regression is when:
-- The diff modifies existing behavior (not new code)
-- The existing test suite (if any) doesn't cover the changed path
-- The change introduces a new failure mode for existing callers
-
-When uncertain whether a change is a regression, err on the side of writing the test.
-
-**Step 4. Output ASCII coverage diagram:**
-
-Include BOTH code paths and user flows in the same diagram. Mark E2E-worthy and eval-worthy paths:
-
-```
-CODE PATH COVERAGE
-===========================
-[+] src/services/billing.ts
-    │
-    ├── processPayment()
-    │   ├── [★★★ TESTED] Happy path + card declined + timeout — billing.test.ts:42
-    │   ├── [GAP]         Network timeout — NO TEST
-    │   └── [GAP]         Invalid currency — NO TEST
-    │
-    └── refundPayment()
-        ├── [★★  TESTED] Full refund — billing.test.ts:89
-        └── [★   TESTED] Partial refund (checks non-throw only) — billing.test.ts:101
-
-USER FLOW COVERAGE
-===========================
-[+] Payment checkout flow
-    │
-    ├── [★★★ TESTED] Complete purchase — checkout.e2e.ts:15
-    ├── [GAP] [→E2E] Double-click submit — needs E2E, not just unit
-    ├── [GAP]         Navigate away during payment — unit test sufficient
-    └── [★   TESTED]  Form validation errors (checks render only) — checkout.test.ts:40
-
-[+] Error states
-    │
-    ├── [★★  TESTED] Card declined message — billing.test.ts:58
-    ├── [GAP]         Network timeout UX (what does user see?) — NO TEST
-    └── [GAP]         Empty cart submission — NO TEST
-
-[+] LLM integration
-    │
-    └── [GAP] [→EVAL] Prompt template change — needs eval test
-
-─────────────────────────────────
-COVERAGE: 5/13 paths tested (38%)
-  Code paths: 3/5 (60%)
-  User flows: 2/8 (25%)
-QUALITY:  ★★★: 2  ★★: 2  ★: 1
-GAPS: 8 paths need tests (2 need E2E, 1 needs eval)
-─────────────────────────────────
-```
+**REGRESSION RULE (mandatory).** The reference's iron rule applies in `/plan-eng-review`'s planning form: when the audit identifies a regression risk, a regression test is added to the plan as a **CRITICAL** requirement. No AskUserQuestion. No skipping.
 
 **Fast path:** All paths covered → "Test review: All new code paths have test coverage ✓" Continue.
 
-**Step 5. Add missing tests to the plan:**
+**Add missing tests to the plan:**
 
 For each GAP identified in the diagram, add a test requirement to the plan. Be specific:
 - What test file to create (match existing naming conventions)
@@ -417,8 +266,9 @@ Options:
 **If B:** Print "Skipping outside voice." and continue to the next section.
 
 **If A:** Construct the plan review prompt. Read the plan file being reviewed (the file
-the user pointed this review at, or the branch diff scope). If a CEO plan document
-was written in Step 0D-POST, read that too — it contains the scope decisions and vision.
+the user pointed this review at, or the branch diff scope). If a separate scope/vision
+document exists for this plan, read that too — it contains the scope decisions the
+outside voice should challenge.
 
 Construct this prompt (substitute the actual plan content — if plan content exceeds 30KB,
 truncate to the first 30KB and note "Plan truncated for size"). **Always start with the
@@ -529,11 +379,11 @@ agree with the outside voice. Cross-model consensus is a strong signal — prese
 such — but the user makes the decision.
 
 ### CRITICAL RULE — How to ask questions
-Follow the AskUserQuestion format from the Preamble above. Additional rules for plan reviews:
+Rules for AskUserQuestion in plan reviews:
 * **One issue = one AskUserQuestion call.** Never combine multiple issues into one question.
 * Describe the problem concretely, with file and line references.
 * Present 2-3 options, including "do nothing" where that's reasonable.
-* For each option, specify in one line: effort (human: ~X / CC: ~Y), risk, and maintenance burden. If the complete option is only marginally more effort than the shortcut with CC, recommend the complete option.
+* For each option, specify in one line: effort (human: ~X / agent: ~Y), risk, and maintenance burden. If the complete option is only marginally more agent effort than the shortcut, recommend the complete option.
 * **Map the reasoning to my engineering preferences above.** One sentence connecting your recommendation to a specific preference (DRY, explicit > clever, minimal diff, etc.).
 * Label with issue NUMBER + option LETTER (e.g., "3A", "3B").
 * **Escape hatch:** If a section has no issues, say so and move on. If an issue has an obvious fix with no real alternatives, state what you'll do and move on — don't waste a question on it. Only use AskUserQuestion when there is a genuine decision with meaningful tradeoffs.
@@ -620,7 +470,7 @@ At the end of the review, fill in and display this summary so the user can see a
 - Failure modes: ___ critical gaps flagged
 - Outside voice: ran (codex/claude) / skipped
 - Parallelization: ___ lanes, ___ parallel / ___ sequential
-- Lake Score: X/Y recommendations chose complete option
+- Completeness score: X/Y recommendations chose the complete option
 
 ### Retrospective learning
 Check the git log for this branch. If there are prior commits suggesting a previous review cycle (e.g., review-driven refactors, reverted changes), note what was changed and whether the current plan touches the same areas. Be more aggressive reviewing areas that were previously problematic.
@@ -768,13 +618,13 @@ If the user does not respond to an AskUserQuestion or interrupts to move on, not
 - Review report written somewhere other than the end of the plan file (split or duplicated reports).
 - Diff Review entry pre-dating the current HEAD without re-running for the new commits.
 - A spec marked `locked` with unresolved decisions in the review report.
-- The review skipped Implementation / Test / Migration item passes on a non-trivial spec.
+- The review skipped a section (Scope Challenge / Architecture / Code Quality / Tests / Performance) on a non-trivial spec.
 
 ## Verification
 
 A plan-eng-review is DONE when:
 
-- [ ] Each axis (Implementation / Test / Migration / Scope Drift / Adversarial) ran or was deliberately skipped per its tier rules.
+- [ ] Each section (Step 0 Scope Challenge / Architecture / Code Quality / Tests / Performance / Outside Voice) ran or was deliberately skipped per its rules.
 - [ ] Findings have severity and a concrete fix or follow-up.
 - [ ] Unresolved decisions are listed explicitly — none silently defaulted.
 - [ ] The `## REVIEW REPORT` section is written as the last section of the plan file (replacing any prior).

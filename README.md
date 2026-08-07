@@ -52,6 +52,7 @@ After Alice is adopted into a repo, most work starts from one of these paths.
 - `/investigate` — chase bugs, regressions, stack traces, and broken behavior to root cause.
 - `/research` — source-grounded research with citations.
 - `/pr-slicer` — split large branches into reviewable PR slices.
+- `/agentic-readiness` — score how well a coding agent can operate the project like a human developer, write improvement suggestions into `docs/wiki/agentic-readiness/`, and triage them into work or TODOs.
 
 **Utilities**
 
@@ -68,8 +69,9 @@ A cohesive **agentic operating system** for any codebase:
 - **Rules** — eight binding rules covering docs layout, doc updates, spec-required, implementation quality, test discipline, post-feature retro, sub-agent orchestration, response style.
 - **Templates** — overview / spec / decision / implementation starters.
 - **Skills** — project-local workflows for planning, review, QA, diagnosis, research, security, parallel implementation, and iterative improvement. Each writes state to `<project-root>/.alice/mem/` (gitignored, per-checkout). Project-scoped, never reaches into `~/.claude/`. Every skill follows a shared authoring contract — see `framework/skills/README.md`.
-- **References** — harness-agnostic reference catalogs adopters and skills can link to. Currently: `orchestration-patterns.md` (5 endorsed multi-agent shapes + 4 anti-patterns; pairs with the `sub-agent-orchestration` rule).
+- **References** — harness-agnostic reference catalogs adopters and skills can link to. Currently: `orchestration-patterns.md` (5 endorsed multi-agent shapes + 4 anti-patterns; pairs with the `sub-agent-orchestration` rule), `coverage-audit.md` (the shared test-coverage audit `/review` and `/plan-eng-review` run), and `confidence-calibration.md` (the shared finding-confidence contract for reviewer-style skills).
 - **Upgrade path** — `/sync` pulls the latest alice into the adopter's `.alice/`. Classifies every changed file into four tiers (safe add / clean update / local conflict / structural migration), walks the user through each, and stamps `.alice/VERSION`. Never auto-commits. Full flow: `framework/commands/sync.md`; structural migrations documented under `framework/migrations/`.
+- **Recommendations** — an opt-in catalog of third-party tools (`framework/recommendations/README.md`). After bootstrap and after every `/sync`, the driving agent offers the entries whose conditions match the repo; only what the user picks gets installed, always project-scoped. Decisions persist in `.alice/mem/recommendations.json`, so nothing is offered twice.
 - **Sub-agents** — focused roles for code review, security review, user-testing validation, findings triage, resolution evaluation, silent failure hunting, refactor cleanup, SEO, wiki maintenance, and PR slicing. Invoked automatically during the SOP, or delegated into by skills. Stack-agnostic (except `seo-specialist`, which self-gates to web-facing projects); see `template/CLAUDE.md` "Agent routing" for invocation rules.
 
 ## Why Alice
@@ -98,7 +100,7 @@ can point at the same `.alice/` payload over time.
 
 ```
 target-repo/
-  .alice/                  framework payload (rules, templates, commands, references, skills, agents, bin)
+  .alice/                  framework payload (rules, templates, commands, references, recommendations, skills, agents, bin)
   .claude/                 Claude Code config — real dirs holding per-item symlinks into .alice/
     rules/<name>.md       -> ../../.alice/rules/<name>.md
     templates/<name>.md   -> ../../.alice/templates/<name>.md
@@ -129,11 +131,13 @@ alice/
     commands/                     /plan, /sync commands
     references/                   harness-agnostic reference catalogs
                                   (orchestration-patterns.md, …)
+    recommendations/              opt-in third-party tool catalog
+                                  (offered after bootstrap + /sync; user picks)
     skills/                       README.md (skill authoring contract) +
                                   /qa, /diagnosis, /ouroboros, /browse, /review, /plan-eng-review,
                                   /investigate, /setup-browser-cookies,
                                   /security-audit, /research, /pr-slicer,
-                                  /diana, /hugh
+                                  /diana, /hugh, /agentic-readiness
     agents/                       code-reviewer, security-reviewer,
                                   user-testing-validator, findings-triager,
                                   resolution-evaluator,
@@ -162,6 +166,10 @@ The recipe is **always non-destructive**: existing `CLAUDE.md`, `docs/`, `.alice
 If you already have a `docs/` tree but it doesn't follow the alice layout, migrate existing pages by hand into `wiki/` / `plans/archive/` / `ledger/` per their tense, or accept the divergence — alice's rules in `.claude/rules/` only enforce the layout when you write new docs.
 
 See `bootstrap/README.md` for the full step-by-step recipe, the `.codex/` / `.agents/` extension story, and removal instructions.
+
+## Recommended tooling
+
+Alice ships a small catalog of third-party tools at `framework/recommendations/README.md` (vendored to `.alice/recommendations/`). At the end of a bootstrap and at the end of every `/sync`, the driving agent evaluates each entry's condition against the repo (e.g. "React-based web app"), presents the matches with a short honest why-text, and installs **only what the user picks** — always project-scoped: local dev dependency or repo-local config, never global, never user-home. Decisions persist per tool in `.alice/mem/recommendations.json` (`installed` / `declined` / `pending` / `already-present`), so declined tools are never offered twice — and tools the repo already carried are detected up front, recorded `already-present`, and never re-installed. The catalog is data — adding an entry needs no change to the bootstrap or `/sync` flow.
 
 ## How alice itself stays sane
 

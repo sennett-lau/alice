@@ -6,7 +6,7 @@ This directory holds per-version migration instructions for adopting repos. The 
 
 ## When to write one
 
-Write `framework/migrations/<version>.md` (e.g. `1.2.0.md`, `2.0.0.md`) when a release includes any of:
+A release needs a migration file (`framework/migrations/<version>.md`, e.g. `1.2.0.md`, `2.0.0.md`) when it includes any of:
 
 - A file is **renamed** (adopters' references and any overrides must follow)
 - A file is **split** into multiple files (content must be partitioned, not just copied)
@@ -17,6 +17,10 @@ Write `framework/migrations/<version>.md` (e.g. `1.2.0.md`, `2.0.0.md`) when a r
 - A **bin script changes its CLI** (flag removed, argument order changed — callers may need updating)
 
 If you can't decide, err on writing one. Empty "what changed" + no-op "automatic actions" + empty "manual actions" is fine — presence signals the version is inspected.
+
+## Where to write one — pre-release staging
+
+Feature branches never write `framework/migrations/<version>.md` directly: the version number is only known at release time, and parallel branches guessing it collide on the same file. Instead, stage your notes as `framework/migrations/pre-release/<feature-slug>.md` (kebab-case slug for the feature, e.g. `tool-recommendation.md`) — same section structure as a versioned file, no `version` frontmatter field. At release time `/release` consolidates every staged note into the real `<version>.md` and deletes the staged files. `/sync` ignores `pre-release/` entirely. Full convention in [`pre-release/README.md`](pre-release/README.md).
 
 ## File format
 
@@ -58,13 +62,13 @@ If no manual actions apply, write `None.` — don't omit the section.
 
 ## Frontmatter fields
 
-- `version` (required) — the release this migration lands in. Must match the alice `VERSION` file on the release tag.
+- `version` (required) — the release this migration lands in. Must match the alice `VERSION` file on the release tag. Pre-release staging files omit this field — `/release` fills it in at consolidation.
 - `affects` (required) — array of which surfaces the migration touches. Pick from: `framework`, `template/docs`, `template/CLAUDE.md`, `bootstrap`, `symlinks`. Purely informational; `/sync` uses it to label output.
 
 ## Versioning rules
 
 - Migrations are sorted by semver. `/sync` runs every migration where `adopter.current < migration.version <= upstream.latest`, in order.
-- One migration per version. If multiple structural changes land in a release, consolidate them into a single `<version>.md`.
+- One migration per version. If multiple structural changes land in a release, they are consolidated into a single `<version>.md` — `/release` does this automatically from the staged `pre-release/*.md` notes.
 - Do not rewrite an already-released migration file — adopters may have already run it. Fix mistakes in the next version's file.
 - A version bump that needs no migration file is fine (the tiered diff in `/sync` handles non-structural changes). Do not write empty placeholder files.
 

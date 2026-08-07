@@ -6,7 +6,7 @@ Full tour in [`README.md`](README.md). Adoption recipe in [`bootstrap/README.md`
 
 ## What alice is
 
-A generic agentic docs/plans/ledger framework: rules, templates, a `/plan` command, a starter skill set (`qa`, `browse`, `diagnosis`, `ouroboros`, `review`, `plan-eng-review`, `investigate`, `setup-browser-cookies`, `security-audit`, `research`, `pr-slicer`, `diana`, `hugh`), and a docs scaffold (`wiki/` + `plans/active,archive/` + `ledger/` + `todos/`). Stack- and domain-agnostic on purpose — adopter agents fill in stack-specific details at setup time, alice stays universal.
+A generic agentic docs/plans/ledger framework: rules, templates, a `/plan` command, a starter skill set (`qa`, `browse`, `diagnosis`, `ouroboros`, `review`, `plan-eng-review`, `investigate`, `setup-browser-cookies`, `security-audit`, `research`, `pr-slicer`, `diana`, `hugh`, `agentic-readiness`), and a docs scaffold (`wiki/` + `plans/active,archive/` + `ledger/` + `todos/`). Stack- and domain-agnostic on purpose — adopter agents fill in stack-specific details at setup time, alice stays universal.
 
 ## Repo layout
 
@@ -19,9 +19,11 @@ alice/
     rules/                 8 binding rules (ship to adopter at .alice/rules/)
     templates/             overview / spec / decision / implementation / todo
     commands/              /plan + /sync commands (ship to adopter at .alice/commands/)
+    references/            harness-agnostic reference catalogs (ship to adopter at .alice/references/)
     skills/<name>/         skill sources — ship to adopter at .alice/skills/<name>/
     agents/<name>.md       sub-agent sources — ship to adopter at .alice/agents/<name>.md
     migrations/<ver>.md    per-version structural migration notes (read by /sync)
+    migrations/pre-release/  staged migration notes from in-flight branches (consolidated by /release)
     bin/                   alice-slug / alice-diff-scope / alice-review-{log,read} / chrome-cdp
   template/                ships to adopter's repo root
     CLAUDE.md              template that becomes the adopter's CLAUDE.md
@@ -60,7 +62,7 @@ If a new proposal smells like one of these, push back. If it's genuinely a unive
 
 ## Releasing alice
 
-Alice's own version lives in `VERSION` at the repo root (single line, semver, no leading `v`). The `/release` command at `.claude/commands/release.md` runs the full flow: sync `development`, bump `VERSION` with a commit, merge to `main`, tag with a description built from the commit log since the last tag, push both refs.
+Alice's own version lives in `VERSION` at the repo root (single line, semver, no leading `v`). The `/release` command at `.claude/commands/release.md` runs the full flow: sync `development`, consolidate staged notes from `framework/migrations/pre-release/` into `framework/migrations/<version>.md`, bump `VERSION` with a commit, merge to `main`, tag with a description built from the commit log since the last tag, push both refs.
 
 `VERSION` and `.claude/commands/release.md` are **alice-local** — they do not ship to adopters via the bootstrap recipe. Adopters own their own release/deploy story (see "What NOT to add"). Do not move either into `framework/` or `template/`.
 
@@ -68,7 +70,7 @@ Alice's own version lives in `VERSION` at the repo root (single line, semver, no
 
 Adopters pull updates via `/sync` (`framework/commands/sync.md`). Most releases need no migration file — `/sync` walks every changed file in `framework/` and classifies it (Tier 1 add / Tier 2 clean update / Tier 3 local conflict). Tier 4 is the exception: structural changes that can't be resolved by a file-copy.
 
-**If your release renames, splits, deletes, or reshapes anything adopters depend on, write `framework/migrations/<version>.md`.** Full format spec in `framework/migrations/README.md`. Examples that require a migration file:
+**If your change renames, splits, deletes, or reshapes anything adopters depend on, write migration notes — but never to a versioned file.** Feature branches don't know the next version, and parallel branches guessing it collide on the same `<version>.md`. Write `framework/migrations/pre-release/<feature-slug>.md` instead (same format, no `version` frontmatter — see `framework/migrations/pre-release/README.md`); `/release` consolidates every staged note into the real `framework/migrations/<version>.md` once the version is actually decided. Full format spec in `framework/migrations/README.md`. Examples that require migration notes:
 
 - Renaming a skill dir, a rule, a template, a bin script, or a command
 - Splitting a single file into multiple (e.g. one large skill's SKILL.md becomes SKILL.md + docs/)
@@ -78,7 +80,7 @@ Adopters pull updates via `/sync` (`framework/commands/sync.md`). Most releases 
 - Changing the `.alice/` ↔ `.claude/` symlink convention
 - Changing a bin script's CLI surface (flags/args reordered or removed)
 
-Examples that do **not** need a migration file: adding a new skill/agent/rule/template/command, editing the body of an existing file without renaming it, editing docs/comments, fixing bugs in bin scripts without CLI changes.
+Examples that do **not** need migration notes: adding a new skill/agent/rule/template/command, editing the body of an existing file without renaming it, editing docs/comments, fixing bugs in bin scripts without CLI changes.
 
 If you're unsure, write one — an empty "Manual actions" is cheap, a missing migration that strands adopters is not.
 

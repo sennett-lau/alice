@@ -68,6 +68,8 @@ Deep architecture: `docs/wiki/architecture.md`. Domain model: `docs/wiki/domain-
 | `docs/wiki/<page>.md` (other) | load on demand | when the wiki index entry matches the task |
 | `docs/todos/overview.md` | auto-load | every session |
 | `docs/todos/<slug>.md` | load on demand | when working that specific TODO |
+| `docs/todos/findings/overview.md` | auto-load during `diagnosis` / `ouroboros` | otherwise query on demand |
+| `docs/todos/findings/<slug>.md` | load on demand | when fixing or evaluating that finding |
 | `docs/plans/active/<current>/overview.md` | auto-load | while feature in flight |
 | `docs/plans/active/<current>/{spec,decision,implementation}.md` | load on demand | during feature work |
 | `docs/plans/archive/**` | query-only | prior art, retro, reconstruction |
@@ -187,6 +189,7 @@ The vendored alice skill set lives under `.alice/skills/` (symlinked into `.clau
 | Security audit — opt-in or high-risk release check for auth, payments, PII, secrets, CI/CD, dependencies, external integrations, OWASP, LLM trust | `security-audit` |
 | Multi-source research with citations — web synthesis, competitive / market / tech scan | `research` |
 | Pull the latest alice framework into `.alice/` (sync skills, commands, agents, migrations) | `/sync` (`.alice/commands/sync.md`) |
+| Evaluate how agent-friendly this repo is — scorecard + improvement suggestions written to `docs/wiki/agentic-readiness/`, triaged into now / TODO / skip | `/agentic-readiness` |
 | Slice a large branch / PR into a chain of smaller reviewable PRs with a migration PR first, parallel-safe siblings, and a per-PR review gate | `/pr-slicer` |
 | Run the full alice SOP end-to-end for a given feature description with little / no human interaction (chains `/plan` → `/plan-eng-review` → implement → `/review` → `/pr-slicer` → `/security-audit` → retro + doc update, gated by effort tier) | `/diana` |
 | Fan out multiple `/diana` runs in parallel — one per feature — across isolated git worktrees with port allocation, shared inbox for cross-feature signals, and a single drain at the end | `/hugh` |

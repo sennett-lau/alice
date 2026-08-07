@@ -71,7 +71,7 @@ If a skill cannot satisfy the polling requirement for a specific agent call (e.g
 
 ## Pattern catalog
 
-This rule is the policy floor — what every sub-agent dispatch must satisfy. **Which orchestration shape to use** (direct invocation, parallel fan-out, sequential pipeline, research isolation) is a separate question with its own catalog: `framework/references/orchestration-patterns.md`. Read both together when designing a new multi-agent workflow:
+This rule is the policy floor — what every sub-agent dispatch must satisfy. **Which orchestration shape to use** (direct invocation, parallel fan-out, sequential pipeline, research isolation) is a separate question with its own catalog: `.alice/references/orchestration-patterns.md` (source: `framework/references/` in the alice repo). Read both together when designing a new multi-agent workflow:
 
 - **This rule** = mechanics every dispatch obeys (polling, permissions, escalation).
 - **The reference catalog** = endorsed shapes (Patterns 1–5) and anti-patterns (A–D) for *how* dispatches compose.

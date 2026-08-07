@@ -13,7 +13,7 @@ target-repo/
   CLAUDE.md                                      (from alice/template/CLAUDE.md, only if missing)
   .gitignore                                     (.alice/mem/ appended if missing)
   .alice/                                        framework payload — vendored copy of alice/framework/
-    rules/  templates/  commands/  references/  skills/  agents/  bin/
+    rules/  templates/  commands/  references/  recommendations/  skills/  agents/  bin/
   .claude/                                       Claude Code config — real dirs of relative symlinks into .alice/
     rules/
       <name>.md                 -> ../../.alice/rules/<name>.md        (one per file under .alice/rules/)
@@ -160,11 +160,24 @@ To pre-build (optional, e.g. for CI images where you want the binary baked in):
 
 `browse` is the only skill with a package.json — no other skill has a build step.
 
-### 8. Report back to the user
+### 8. Offer recommended tooling (user's choice)
+
+Alice ships a catalog of third-party tools at `.alice/recommendations/README.md` (vendored in step 1). Read it end-to-end — the contract at its top is binding — then:
+
+1. Evaluate each catalog entry's **Condition** against the target repo (read the manifests/files the condition names). Collect the matches.
+2. Run each match's **Detect existing** check. Detected → record `{ "status": "already-present", "decided_at": ... }` in the mem file and exclude it from the offer — the repo had it first; never install over it.
+3. Present what remains in one prompt, leading with any tools found already present ("Already in this repo: react-doctor"): name, the catalog's why-text, and the install method. Multi-select — any subset, and "none" is always a valid answer. If everything that matched is already present, say so and skip the prompt.
+4. Install only what was picked, following the entry's **Install (project-scoped)** steps. Everything lands inside the target repo — local dev dependency, repo-local config. Never a global install, never a user-home write. If a tool's own installer reaches outside the repo, skip that part and surface it.
+5. Record every decision in `<target>/.alice/mem/recommendations.json` (schema in the catalog's "State file" section; `.alice/mem/` is already gitignored via step 5).
+
+No matches → skip silently and write nothing. `/sync` re-runs this flow after every future sync, skipping entries already installed, declined, or already present.
+
+### 9. Report back to the user
 
 Summarize what you did:
 - Files created (paths).
 - Files skipped (paths + the existing thing you found).
+- Recommendations offered in step 8 and their outcomes (installed / declined / deferred / already present).
 - Manual TODOs the user still needs to handle (placeholder fill-ins, wiki seed gaps, conflicts you flagged in steps 1/3/4).
 
 ---

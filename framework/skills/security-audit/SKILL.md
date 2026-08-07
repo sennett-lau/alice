@@ -1,7 +1,7 @@
 ---
 name: security-audit
 preamble-tier: 2
-version: 2.0.1
+version: 2.0.2
 description: |
   Chief Security Officer mode. Infrastructure-first security audit: secrets archaeology,
   dependency supply chain, CI/CD pipeline security, LLM/AI security, skill supply chain
@@ -310,7 +310,7 @@ Use Grep to search for these patterns:
 
 Scan project-local AI skills for malicious patterns. 36% of published skills have security flaws, 13.4% are outright malicious (Snyk ToxicSkills research).
 
-**Scope: repo-local only.** alice is project-scoped and must not reach into user-home state. Do NOT scan `~/.claude/`, `~/.codex/`, `~/.gstack/`, or any global skill install. If the user wants their globally installed skills audited, that's a separate workflow outside alice. Hard-stop this phase at the repo boundary.
+**Scope: repo-local only.** alice is project-scoped and must not reach into user-home state. Do NOT scan `~/.claude/`, `~/.codex/`, any other agent's user-home config dir, or any global skill install. If the user wants their globally installed skills audited, that's a separate workflow outside alice. Hard-stop this phase at the repo boundary.
 
 ```bash
 ls -la .claude/skills/ .alice/skills/ 2>/dev/null
@@ -528,28 +528,7 @@ SECURITY FINDINGS
 
 ### Confidence Calibration
 
-Every finding MUST include a confidence score (1-10):
-
-| Score | Meaning | Display rule |
-|-------|---------|-------------|
-| 9-10 | Verified by reading specific code. Concrete bug or exploit demonstrated. | Show normally |
-| 7-8 | High confidence pattern match. Very likely correct. | Show normally |
-| 5-6 | Moderate. Could be a false positive. | Show with caveat: "Medium confidence, verify this is actually an issue" |
-| 3-4 | Low confidence. Pattern is suspicious but may be fine. | Suppress from main report. Include in appendix only. |
-| 1-2 | Speculation. | Only report if severity would be P0. |
-
-**Finding format:**
-
-\`[SEVERITY] (confidence: N/10) file:line — description\`
-
-Example:
-\`[P1] (confidence: 9/10) app/models/user.rb:42 — SQL injection via string interpolation in where clause\`
-\`[P2] (confidence: 5/10) app/controllers/api/v1/users_controller.rb:18 — Possible N+1 query, verify with production logs\`
-
-**Calibration learning:** If you report a finding with confidence < 7 and the user
-confirms it IS a real issue, that is a calibration event. Your initial confidence was
-too low. Log the corrected pattern as a learning so future reviews catch it with
-higher confidence.
+Read `.alice/references/confidence-calibration.md` and apply it to every finding: each finding carries a 1-10 confidence score in the `[SEVERITY] (confidence: N/10) file:line — description` format. This audit's own reporting gates (8/10 daily, 2/10 comprehensive — Phase 12) apply on top of that display contract. Log calibration events per the reference.
 
 For each finding:
 ```

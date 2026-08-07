@@ -1,6 +1,6 @@
 # /sync — align .alice/ with upstream alice
 
-Pulls the latest alice framework into the adopter's `.alice/`, classifies every changed file into one of four tiers (safe add / clean update / local conflict / structural migration), walks the user through each tier interactively, then stamps the new version into `.alice/VERSION`. Leaves the working tree dirty for the user to commit — never auto-commits, never pushes.
+Pulls the latest alice framework into the adopter's `.alice/`, classifies every changed file into one of four tiers (safe add / clean update / local conflict / structural migration), walks the user through each tier interactively, stamps the new version into `.alice/VERSION`, then offers any open entries from the upstream tool recommendation catalog. Leaves the working tree dirty for the user to commit — never auto-commits, never pushes.
 
 This command runs in the **adopter** repo, not in alice itself. It uses the `upstream` field stamped into `.alice/VERSION` at bootstrap time to locate the alice source.
 
@@ -114,6 +114,8 @@ Independent of the file-diff walk. Load every migration file from `$SYNC_DIR/lat
 - `version > CURRENT_VERSION`
 - `version <= LATEST_VERSION`
 
+Only exact `<semver>.md` files directly in `framework/migrations/` qualify — `README.md` and the `pre-release/` staging folder (unreleased maintainer notes) are never read.
+
 Sort by semver. These define structural changes that the file-diff walk can't represent (renames, splits, deletes, layout shifts). See `framework/migrations/README.md` for format.
 
 ### Deletions (sub-tier)
@@ -222,6 +224,34 @@ For each migration file, in semver order:
 
 ---
 
+## Step 7.5 — first-run agentic-readiness offer
+
+After migrations complete (this step also runs when there were no Tier 4 migrations), check whether the adopter has ever run the `agentic-readiness` review:
+
+```bash
+[ -f .alice/mem/agentic-readiness.json ] && echo "ALREADY_RUN" || echo "NEVER_RUN"
+[ -d .alice/skills/agentic-readiness ] && echo "SKILL_PRESENT" || echo "SKILL_ABSENT"
+```
+
+Skip this step silently when the marker exists (`ALREADY_RUN`) or the skill is not vendored (`SKILL_ABSENT`).
+
+On `NEVER_RUN` + `SKILL_PRESENT`, offer — never force — via `AskUserQuestion`:
+
+```
+This repo has never had an agentic-readiness review — a one-time assessment of
+how well a coding agent can operate this project (auth/UI/data/CI parity, tests,
+parallel dev servers, observability, the end-to-end bug loop). It writes a
+scorecard + improvement suggestions to docs/wiki/agentic-readiness/ and lets you
+triage each suggestion. Run it after this sync completes?
+
+A) Yes — run /agentic-readiness after the sync report
+B) Not now — you can run /agentic-readiness anytime
+```
+
+Record the answer and continue the sync either way. Do **not** run the review mid-sync — it writes to `docs/wiki/` and `.alice/mem/`, which is outside `/sync`'s write boundary; if accepted, it runs after Step 11's final report as its own follow-on action.
+
+---
+
 ## Step 8 — refresh `.claude/` shims
 
 Sanity pass, idempotent:
@@ -281,24 +311,44 @@ Do the same for `template/docs/README.md` vs adopter's `docs/README.md` if prese
 
 ---
 
-## Step 11 — final report
+## Step 11 — offer recommended tooling
+
+Runs after all sync mechanics are done — it never blocks the version stamp, and a failure here is non-fatal (report it in Step 12, don't roll back anything).
+
+Read the catalog at `$SYNC_DIR/latest/framework/recommendations/README.md` (the fresh clone — always the newest catalog; the contract at its top is binding). If the file doesn't exist upstream, skip this step.
+
+1. Load `.alice/mem/recommendations.json` if present. Entries with status `installed`, `declined`, or `already-present` are settled — skip them, no re-asking. Entries `pending` or absent are open.
+2. Evaluate each open entry's **Condition** against the adopter repo (read the manifests/files the condition names). Collect the matches.
+3. Run each match's **Detect existing** check. Detected → record `{ "status": "already-present", "decided_at": ... }` in the mem file and exclude it from the offer — the repo had it first; never install over it.
+4. If anything remains, present it in one `AskUserQuestion`, leading with any tools found already present ("Already in this repo: react-doctor"): name, the catalog's why-text, and the install method. Multi-select — any subset, and "none" is always a valid answer. If everything that matched is already present, say so and skip the prompt.
+5. Install only what was picked, following the entry's **Install (project-scoped)** steps. Everything lands inside the adopter repo — local dev dependency, repo-local config. Never a global install, never a user-home write. If a tool's own installer reaches outside the repo, skip that part and surface it.
+6. Write every decision back to `.alice/mem/recommendations.json` (schema in the catalog's "State file" section — `installed` / `declined` / `pending` / `already-present`, one key per entry slug).
+
+No open matches → skip silently and write nothing.
+
+---
+
+## Step 12 — final report
 
 Output:
 
 ```
 alice sync complete: v$CURRENT_VERSION → v$LATEST_VERSION
 
-  added:          N files
-  updated:        M files
-  conflicts:      K (resolved: X, skipped: Y, markers left: Z)
-  migrations ran: J
-  manual items:   L (see .alice/mem/alice-sync/TODO.md)
+  added:           N files
+  updated:         M files
+  conflicts:       K (resolved: X, skipped: Y, markers left: Z)
+  migrations ran:  J
+  manual items:    L (see .alice/mem/alice-sync/TODO.md)
+  recommendations: offered O, installed I, declined D, already present P
 
 Backup: $SYNC_DIR/backup/
 Changes staged — review with `git status` / `git diff`, commit when ready.
 ```
 
 Do **not** commit. Do **not** push. Adopter owns their git story.
+
+If the user accepted the Step 7.5 offer, invoke the `agentic-readiness` skill now — after this report, as its own action outside the sync. Its writes (`docs/wiki/agentic-readiness/`, `.alice/mem/agentic-readiness.json`) belong to the skill, not to the sync changeset.
 
 If any step failed partway, do not produce this report — point the user at the backup and exit with an error explanation.
 
@@ -315,7 +365,7 @@ If any step failed partway, do not produce this report — point the user at the
 
 ## Boundaries
 
-- Never touches `CLAUDE.md`, `docs/`, or `.gitignore` outside of explicit Tier 4 migration auto-actions.
+- Never touches `CLAUDE.md`, `docs/`, or `.gitignore` outside of explicit Tier 4 migration auto-actions or a Step 11 install the user explicitly picked.
 - Never runs `gh`, `git push`, `git commit`. Read-only against remote except for the clone.
-- Writes only to `.alice/`, `.claude/` (symlinks), `.alice/mem/alice-sync/`, and paths touched by migration auto-action scripts.
+- Writes only to `.alice/`, `.claude/` (symlinks), `.alice/mem/alice-sync/`, `.alice/mem/recommendations.json`, paths touched by migration auto-action scripts, and — only for tools the user explicitly picked in Step 11 — the project-scoped surfaces named in their install steps (dependency manifests, lockfiles, repo-local config). Never global, never user-home.
 - Leaves `.alice/mem/alice-sync/<ts>/` on disk after success — user can rm manually, or a later `/sync` cleans old runs.

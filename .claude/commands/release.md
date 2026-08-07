@@ -1,6 +1,6 @@
 # /release — cut a new alice version
 
-End-to-end release flow for **alice itself** (not for adopting repos — they own their own deploy story). Syncs `development`, bumps `VERSION`, merges to `main`, tags with a description built from the commit log, pushes both refs.
+End-to-end release flow for **alice itself** (not for adopting repos — they own their own deploy story). Syncs `development`, consolidates staged pre-release migration notes, bumps `VERSION`, merges to `main`, tags with a description built from the commit log, pushes both refs.
 
 This is a maintainer command, not a framework export. It is scoped to this repo's two-branch layout: work lands on `development`, releases land on `main`.
 
@@ -57,7 +57,35 @@ Set `NEW_VERSION` from the user's choice.
 
 ---
 
-## Step 4 — bump `VERSION` and commit on `development`
+## Step 4 — consolidate pre-release migration notes
+
+Feature branches stage migration notes in `framework/migrations/pre-release/` instead of guessing the next version (convention: `framework/migrations/pre-release/README.md`). This step turns those notes into the release's real migration file.
+
+```bash
+STAGED=$(ls framework/migrations/pre-release/*.md 2>/dev/null | grep -v '/README\.md$' || true)
+```
+
+If `$STAGED` is empty, skip this step silently — most releases ship no structural changes.
+
+Otherwise, write `framework/migrations/$NEW_VERSION.md` in the versioned format (spec: `framework/migrations/README.md`), merging every staged file:
+
+- **Frontmatter:** `version: $NEW_VERSION`; `affects` is the deduplicated union of every staged file's `affects` array.
+- **What changed:** one `### <feature-slug>` subsection per staged file, in filename order, carrying that file's prose — keeps per-feature attribution readable. Trim only exact duplication.
+- **Automatic actions:** a single bash block concatenating each staged file's block under a `# --- <feature-slug>` comment header. Drop `None.` entries and deduplicate identical commands. If nothing remains, write `None.` under the heading.
+- **Manual actions:** concatenate the checklists, grouped under a `**<feature-slug>**` lead-in per feature; deduplicate identical bullets. If nothing remains, write `None.`
+
+Then stage the swap — consumed files are deleted, `README.md` stays (it keeps the folder tracked):
+
+```bash
+git add "framework/migrations/$NEW_VERSION.md"
+git rm --quiet framework/migrations/pre-release/<each-consumed-file>.md
+```
+
+Both ride in the release commit in Step 5.
+
+---
+
+## Step 5 — bump `VERSION` and commit on `development`
 
 ```bash
 echo "$NEW_VERSION" > VERSION
@@ -66,9 +94,11 @@ git commit -m "chore: release v$NEW_VERSION"
 git push origin development
 ```
 
+The commit picks up anything Step 4 staged — the consolidated migration file and the pre-release deletions land here.
+
 ---
 
-## Step 5 — merge to `main` and tag
+## Step 6 — merge to `main` and tag
 
 ```bash
 git checkout main
@@ -113,7 +143,7 @@ EOF
 
 ---
 
-## Step 6 — push `main` and the tag
+## Step 7 — push `main` and the tag
 
 ```bash
 git push origin main
@@ -124,7 +154,7 @@ If either push is rejected, STOP and tell the user — do not force-push.
 
 ---
 
-## Step 7 — return to `development`
+## Step 8 — return to `development`
 
 ```bash
 git checkout development
