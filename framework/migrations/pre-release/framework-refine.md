@@ -1,5 +1,4 @@
 ---
-version: 1.6.0
 affects: [framework, template/docs, template/CLAUDE.md]
 ---
 
