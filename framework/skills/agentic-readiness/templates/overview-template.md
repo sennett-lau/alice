@@ -2,17 +2,20 @@
 
 **Last review:** YYYY-MM-DD
 **Product type:** <detected type> — <one line on the realistic ceiling graded against>
-**Overall:** <N>/<max> (max = 4 × scored criteria; N/A criteria excluded)
+
+**Agentic readiness: <NN>%** (mean of the non-N/A criterion percentages)
 
 ## Scorecard
 
+Percentages map to evidence anchors (0% / 25% / 50% / 75% / 100% — no intermediate values); `N/A` = not applicable to this product type, excluded from the mean, with the ceiling reason in the summary column.
+
 | # | Criterion | Score | Summary |
 |---|-----------|-------|---------|
-| 1 | Human-parity operations | <0–4 / N/A> | <one line: what works, what's locked to humans> |
-| 2 | Testing foundation | <0–4 / N/A> | <one line: suite layers present, ease of adding a case> |
-| 3 | Dev server & parallelism | <0–4 / N/A> | <one line: startup reliability, worktree/multi-instance story> |
-| 4 | Observability access | <0–4 / N/A> | <one line: what the agent can actually read> |
-| 5 | End-to-end bug loop | <0–4 / N/A> | weakest link: <link> — <why> |
+| 1 | Human-parity operations | <NN% / N/A> | <one line: what works, what's locked to humans> |
+| 2 | Testing foundation | <NN% / N/A> | <one line: suite layers present, ease of adding a case> |
+| 3 | Dev server & parallelism | <NN% / N/A> | <one line: startup reliability, worktree/multi-instance story> |
+| 4 | Observability access | <NN% / N/A> | <one line: what the agent can actually read> |
+| 5 | End-to-end bug loop | <NN% / N/A> | weakest link: <link> — <why> |
 
 Evidence per criterion lives in the review notes below; grading anchors in `.alice/skills/agentic-readiness/references/criteria.md`.
 
@@ -50,4 +53,4 @@ One file per suggestion in this folder. Statuses: Proposed (awaiting triage) / T
 
 <!-- Append one line per run; never delete old lines. -->
 
-- YYYY-MM-DD — <N>/<max> — <one-line note: first run, or what moved since last run>
+- YYYY-MM-DD — <NN>% — <one-line note: first run, or what moved since last run>

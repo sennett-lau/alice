@@ -1,7 +1,7 @@
 ---
 name: agentic-readiness
 preamble-tier: 4
-version: 1.0.0
+version: 1.1.0
 description: |
   Evaluate how agent-friendly this project is — whether a coding agent can
   operate it the way a human developer can (run it, log in to it, test it,
@@ -87,14 +87,14 @@ For each criterion:
 
 - Run the probes listed in `references/criteria.md`. Cheap and read-only by default; anything heavier (starting the dev server, running the full test suite) only if it is quick, safe, and non-destructive — ask first when unsure.
 - Record 2–5 lines of **evidence** (file paths, command output, doc quotes). A score with no evidence is invalid.
-- Score 0–4 against the anchors in the reference file, calibrated to the product type from Step 2. Use `N/A` where the type makes the criterion meaningless.
+- Assess against the 0–4 anchors in the reference file (they prevent invented precision), calibrated to the product type from Step 2, then **present the result as the anchor's percentage**: 0→0%, 1→25%, 2→50%, 3→75%, 4→100%. All user-facing output shows percentages, never the raw anchor. Use `N/A` where the type makes the criterion meaningless.
 - Draft the improvement suggestions this criterion surfaces (Step 4 writes them out). One suggestion = one concrete, self-contained gap.
 
 ### Step 4 — Write the wiki folder
 
 All output lands in the **adopter repo's** `docs/wiki/agentic-readiness/` (create the folder on first run).
 
-1. **`overview.md`** — from `.alice/skills/agentic-readiness/templates/overview-template.md`: review date, detected product type + ceiling note, scorecard table (five criteria, score, one-line summary), suggestion index table, review history.
+1. **`overview.md`** — from `.alice/skills/agentic-readiness/templates/overview-template.md`: review date, detected product type + ceiling note, the headline "Agentic readiness: NN%", scorecard table (five criteria, percentage or N/A, one-line summary), suggestion index table, review history.
 2. **One file per suggestion** — `<slug>.md` (kebab-case noun phrase, e.g. `parallel-dev-databases.md`), from `.alice/skills/agentic-readiness/templates/suggestion-template.md`: what's missing, why it matters for agents, concrete implementation direction, rough effort (S/M/L/XL), status, triage record. The slug doubles as the TODO slug if the suggestion is deferred in Step 5.
 3. **Index line** — ensure `docs/wiki/README.md` has one index entry for the folder's entry point (suggestion pages are reached via the overview, they do not get their own index lines):
 
@@ -128,22 +128,21 @@ Write `.alice/mem/agentic-readiness.json` (this is what `/sync` checks to decide
 ```json
 {
   "last_run": "YYYY-MM-DD",
-  "skill_version": "1.0.0",
+  "skill_version": "1.1.0",
   "product_type": "<detected type>",
-  "overall_score": 13,
-  "max_score": 20,
+  "overall_percent": 65,
   "scores": {
-    "human-parity-operations": 3,
-    "testing-foundation": 2,
-    "dev-server-parallelism": 3,
-    "observability-access": 2,
-    "bug-loop": 3
+    "human-parity-operations": 75,
+    "testing-foundation": 50,
+    "dev-server-parallelism": 75,
+    "observability-access": 50,
+    "bug-loop": 75
   },
   "suggestions": { "proposed": 0, "todo": 2, "in_progress": 1, "done": 1, "skipped": 1 }
 }
 ```
 
-`max_score` = 4 × number of scored (non-`N/A`) criteria. `N/A` criteria appear in `scores` as `null`. `suggestions` counts files in `docs/wiki/agentic-readiness/` by status after triage.
+`scores` values are the anchor percentages (only `0`, `25`, `50`, `75`, `100`, or `null` for `N/A` — intermediate values are invented precision). `overall_percent` = mean of the non-`null` values, rounded to the nearest integer. `suggestions` counts files in `docs/wiki/agentic-readiness/` by status after triage.
 
 ### Step 7 — Report
 
@@ -153,12 +152,12 @@ Return under 250 words:
 /agentic-readiness complete
 
 Product type: <type> — <ceiling note>
-Overall: <N>/<max> (<prev N/max on re-runs, with delta>)
-  1. Human-parity operations   <score>  <one-liner>
-  2. Testing foundation        <score>  <one-liner>
-  3. Dev server & parallelism  <score>  <one-liner>
-  4. Observability access      <score>  <one-liner>
-  5. End-to-end bug loop       <score>  <weakest link: ...>
+Agentic readiness: <NN>% (<prev NN% on re-runs, with delta>)
+  1. Human-parity operations   <NN% / N/A>  <one-liner>
+  2. Testing foundation        <NN% / N/A>  <one-liner>
+  3. Dev server & parallelism  <NN% / N/A>  <one-liner>
+  4. Observability access      <NN% / N/A>  <one-liner>
+  5. End-to-end bug loop       <NN% / N/A>  <weakest link: ...>
 
 Suggestions: <total> (now: X, todo: Y, skipped: Z)
 Scorecard: docs/wiki/agentic-readiness/overview.md
@@ -167,16 +166,18 @@ Marker: .alice/mem/agentic-readiness.json
 
 ## Scoring
 
-| Score | Meaning |
-|-------|---------|
-| 4 | An agent does this unassisted today — documented, working, verified by probe |
-| 3 | Works with minor friction (one undocumented step, one manual assist) |
-| 2 | Partially possible — significant gaps, agent needs human help for common cases |
-| 1 | Technically possible but undocumented, fragile, or prohibitively slow |
-| 0 | Not possible for an agent today |
-| N/A | Not applicable to this product type — excluded from `max_score` |
+Criteria are assessed against the anchors in `references/criteria.md` and **presented as percentages**. Only the five anchor values exist — intermediate percentages are invented precision.
 
-Score against the product type's realistic ceiling (Step 2), not an absolute ideal. Every score cites evidence.
+| Anchor | Shown as | Meaning |
+|--------|----------|---------|
+| 4 | 100% | An agent does this unassisted today — documented, working, verified by probe |
+| 3 | 75% | Works with minor friction (one undocumented step, one manual assist) |
+| 2 | 50% | Partially possible — significant gaps, agent needs human help for common cases |
+| 1 | 25% | Technically possible but undocumented, fragile, or prohibitively slow |
+| 0 | 0% | Not possible for an agent today |
+| N/A | N/A | Not applicable to this product type — excluded from the overall mean, listed with the ceiling reason |
+
+**Overall readiness** = mean of the non-`N/A` criterion percentages, rounded to the nearest integer — the single headline "Agentic readiness: NN%" in `overview.md`. Score against the product type's realistic ceiling (Step 2), not an absolute ideal. Every score cites evidence.
 
 ## Interaction with other skills
 
@@ -189,7 +190,7 @@ Score against the product type's realistic ceiling (Step 2), not an absolute ide
 | Rationalization | Reality |
 |---|---|
 | "I can score this from the README, no need to probe." | READMEs describe intent, not reality. A dev-server command that errors, or a test suite that fails on a clean checkout, is exactly what this review exists to catch. Run the cheap probes. |
-| "This project type can never score well, so the review is pointless." | Calibration is the point. A library scoring 4/4 on its realistic ceiling is more agent-ready than a web app at 2/4. Grade against the ceiling and say what the ceiling is. |
+| "This project type can never score well, so the review is pointless." | Calibration is the point. A library at 100% of its realistic ceiling is more agent-ready than a web app at 50%. Grade against the ceiling and say what the ceiling is. |
 | "I'll just fix the gaps while I'm here." | Unapproved fixes are scope creep. The contract is: written suggestions, then user triage, then only the approved work — with `/plan` in front of anything non-trivial. |
 | "One big suggestions file is tidier than many small ones." | One file per suggestion is what makes triage, TODO promotion, and re-run status tracking possible. The overview is the aggregation layer. |
 | "Skipped last time, so I'll drop the file." | Statuses are the history. Deleting a skipped suggestion guarantees the next run re-raises it and re-litigates the same decision. |

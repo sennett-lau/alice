@@ -1,6 +1,8 @@
 # Agentic readiness — evaluation criteria
 
-Detailed probes and score anchors for the `agentic-readiness` skill. Five scored criteria (each 0–4 or N/A) plus a calibration section (Criterion 5 in the task ordering) that modulates how the others are graded. Every probe is stack-agnostic — substitute the project's actual commands from `CLAUDE.md` and its manifests.
+Detailed probes and score anchors for the `agentic-readiness` skill. Five scored criteria plus a calibration section (Criterion 5 in the task ordering) that modulates how the others are graded. Every probe is stack-agnostic — substitute the project's actual commands from `CLAUDE.md` and its manifests.
+
+Assessment uses the 0–4 anchors below (they prevent invented precision), but **all user-facing output presents the anchor's percentage**: 0→0%, 1→25%, 2→50%, 3→75%, 4→100%. `N/A` stays `N/A` and is excluded from the overall mean.
 
 Rules for every criterion:
 
@@ -103,7 +105,7 @@ Existence without access scores low: a beautiful dashboard the agent can't query
 
 ## Criterion 5 — Product-type calibration (grading modifier, not scored)
 
-Different product types have different realistic ceilings. Detect the type first (manifests, entry points, `CLAUDE.md`), state it in the scorecard, then grade criteria 1–4 and 6 against the matching ceiling. Mark criteria `N/A` where the type makes them meaningless — an `N/A` shrinks `max_score`, it is not a 0.
+Different product types have different realistic ceilings. Detect the type first (manifests, entry points, `CLAUDE.md`), state it in the scorecard, then grade criteria 1–4 and 6 against the matching ceiling. Mark criteria `N/A` where the type makes them meaningless — an `N/A` is excluded from the overall mean (with the ceiling reason noted in the scorecard), it is not a 0%.
 
 | Product type | Realistic ceiling — what full parity looks like | Common N/A / discounts |
 |---|---|---|
