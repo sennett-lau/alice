@@ -2,7 +2,7 @@
 
 Reference catalog of agent orchestration patterns alice endorses, plus anti-patterns to avoid. Read this before adding a new slash command that coordinates multiple personas, or before introducing a new persona that "wraps" existing ones.
 
-Pairs with `framework/rules/sub-agent-orchestration.md`: that rule is the **policy** (polling cadence, permission protocol, escalation contract); this file is the **catalog** (which shapes of orchestration are blessed, which are anti-patterns).
+Pairs with `.alice/rules/sub-agent-orchestration.md`: that rule is the **policy** (polling cadence, permission protocol, escalation contract); this file is the **catalog** (which shapes of orchestration are blessed, which are anti-patterns).
 
 The governing rule: **the user (or a slash command) is the orchestrator. Personas do not invoke other personas.** Skills are mandatory hops inside a persona's workflow; personas are leaves.
 
@@ -74,7 +74,7 @@ fan out  ─────────┼─→ security-reviewer   ─┤→ merg
 - [ ] Does each persona produce a different *kind* of finding, not just the same finding from a different angle?
 - [ ] Will the merge step fit in the main agent's remaining context?
 - [ ] Is the user's wait time long enough that parallelism is actually noticeable?
-- [ ] Does the orchestrator poll each background sub-agent per `framework/rules/sub-agent-orchestration.md`?
+- [ ] Does the orchestrator poll each background sub-agent per `.alice/rules/sub-agent-orchestration.md`?
 
 If any answer is "no," fall back to direct invocation or a single-persona command.
 
@@ -155,22 +155,7 @@ A `code-reviewer` that internally invokes `security-reviewer` when it sees auth 
 
 **What to do instead:** have the calling persona *recommend* a follow-up audit in its report. The user or a slash command runs the second pass.
 
-The same constraint applies to any internal fresh-context review gate: the main session or slash command may spawn a reviewer; a persona must not spawn another persona.
-
----
-
-## Fresh-context adversarial review as an internal gate
-
-Fresh-context review is useful, but it is **not** a user-facing skill. Users should not have to know when to ask the agent to doubt itself. Instead, obvious workflows apply it internally when the artifact is high-risk or already in review scope:
-
-- `plan-eng-review` challenges plans before implementation.
-- `review` challenges completed diffs before landing.
-- `diana` may use reviewer fan-out in high/max effort or when a decision touches irreversible data, security-sensitive logic, public APIs, or cross-module contracts.
-- `pr-slicer` runs its end-of-chain adversarial pass before the final PR when slices need to compose.
-
-Use the smallest reviewable artifact and a contract, not the author's reasoning. Ask the reviewer to find issues, unstated assumptions, edge cases, hidden coupling, or contract violations. The orchestrator reconciles findings; it does not rubber-stamp them.
-
-Do not add a separate "doubt" skill for this. If the work is a plan, use `plan-eng-review`; if it is code, use `review`; if it is an autonomous full SOP, let `diana` decide from effort/risk.
+The same constraint applies to any internal fresh-context review gate: the main session or slash command may spawn a reviewer; a persona must not spawn another persona. (See "Fresh-context adversarial review as an internal gate" below.)
 
 ---
 
@@ -200,6 +185,21 @@ A slash command that calls a "coordinator" persona that calls a "quality" person
 - The leaf personas lose context to multiple summarization steps.
 
 **What to do instead:** keep the orchestration depth at most 1 (slash command → personas). The merge happens in the main agent.
+
+---
+
+## Fresh-context adversarial review as an internal gate
+
+Fresh-context review is useful, but it is **not** a user-facing skill. Users should not have to know when to ask the agent to doubt itself. Instead, obvious workflows apply it internally when the artifact is high-risk or already in review scope:
+
+- `plan-eng-review` challenges plans before implementation.
+- `review` challenges completed diffs before landing.
+- `diana` may use reviewer fan-out in high/max effort or when a decision touches irreversible data, security-sensitive logic, public APIs, or cross-module contracts.
+- `pr-slicer` runs its end-of-chain adversarial pass before the final PR when slices need to compose.
+
+Use the smallest reviewable artifact and a contract, not the author's reasoning. Ask the reviewer to find issues, unstated assumptions, edge cases, hidden coupling, or contract violations. The orchestrator reconciles findings; it does not rubber-stamp them.
+
+Do not add a separate "doubt" skill for this. If the work is a plan, use `plan-eng-review`; if it is code, use `review`; if it is an autonomous full SOP, let `diana` decide from effort/risk.
 
 ---
 

@@ -68,6 +68,8 @@ Deep architecture: `docs/wiki/architecture.md`. Domain model: `docs/wiki/domain-
 | `docs/wiki/<page>.md` (other) | load on demand | when the wiki index entry matches the task |
 | `docs/todos/overview.md` | auto-load | every session |
 | `docs/todos/<slug>.md` | load on demand | when working that specific TODO |
+| `docs/todos/findings/overview.md` | auto-load during `diagnosis` / `ouroboros` | otherwise query on demand |
+| `docs/todos/findings/<slug>.md` | load on demand | when fixing or evaluating that finding |
 | `docs/plans/active/<current>/overview.md` | auto-load | while feature in flight |
 | `docs/plans/active/<current>/{spec,decision,implementation}.md` | load on demand | during feature work |
 | `docs/plans/archive/**` | query-only | prior art, retro, reconstruction |

@@ -22,6 +22,6 @@ Append to `docs/ledger/decisions.md` using this shape. One entry per decision.
 - <what this costs us>
 - <what it forecloses>
 
-**Revisit when:** <concrete condition that would make us reconsider — "if X becomes a real limit", "if we add chain Y", etc.>
+**Revisit when:** <concrete condition that would make us reconsider — "if X becomes a real limit", "if requirement Y arrives", etc.>
 
 **Pointers:** <PRs, plans/archive folder, related decisions>

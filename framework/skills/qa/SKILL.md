@@ -1,7 +1,7 @@
 ---
 name: qa
 preamble-tier: 4
-version: 2.0.1
+version: 2.0.2
 description: |
   Systematically QA test a web application and fix bugs found. Runs QA testing,
   then iteratively fixes bugs in source code, committing each fix atomically and
@@ -668,13 +668,13 @@ The overview holds the pointers; the per-TODO file holds the context. Long conte
 
 ---
 
-### Additional Rules (qa-specific)
+### Additional Rules (qa-specific, continuing the Important Rules list)
 
-11. **Clean working tree required.** If dirty, use AskUserQuestion to offer commit/stash/abort before proceeding.
-12. **One commit per fix.** Never bundle multiple fixes into one commit.
-13. **Only modify tests when generating regression tests in Phase 8e.5.** Never modify CI configuration. Never modify existing tests — only create new test files.
-14. **Revert on regression.** If a fix makes things worse, `git revert HEAD` immediately.
-15. **Self-regulate.** Follow the WTF-likelihood heuristic. When in doubt, stop and ask.
+13. **Clean working tree required.** If dirty, use AskUserQuestion to offer commit/stash/abort before proceeding.
+14. **One commit per fix.** Never bundle multiple fixes into one commit.
+15. **Only modify tests when generating regression tests in Phase 8e.5.** Never modify CI configuration. Never modify existing tests — only create new test files.
+16. **Revert on regression.** If a fix makes things worse, `git revert HEAD` immediately.
+17. **Self-regulate.** Follow the WTF-likelihood heuristic. When in doubt, stop and ask.
 
 ## Common Rationalizations
 

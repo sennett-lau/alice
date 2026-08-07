@@ -10,6 +10,10 @@ docs/
   todos/                 # live backlog
     overview.md          # index — auto-load every session
     <slug>.md            # per-TODO detail (load on demand)
+    findings/            # diagnosis findings backlog
+      overview.md        # findings index (auto-load during diagnosis/ouroboros)
+      <slug>.md          # per-finding detail (load on demand)
+      _dropped.md        # triage noise log (query-only)
   wiki/                  # stable knowledge
     README.md            # index — auto-load (one-line description of every page)
     current-status.md    # auto-load — what's shipped / in flight
@@ -38,6 +42,9 @@ docs/
 | `docs/wiki/<page>.md` (other) | load on demand | when the index entry matches the task |
 | `docs/todos/overview.md` | auto-load | every session |
 | `docs/todos/<slug>.md` | load on demand | when working that specific TODO |
+| `docs/todos/findings/overview.md` | auto-load during `diagnosis` / `ouroboros` | otherwise query on demand |
+| `docs/todos/findings/<slug>.md` | load on demand | when fixing or evaluating that finding |
+| `docs/todos/findings/_dropped.md` | query-only | when auditing triage decisions |
 | `docs/plans/active/<current>/overview.md` | auto-load | while feature is in flight |
 | `docs/plans/active/<current>/{spec,decision,implementation}.md` | load on demand | during feature work |
 | `docs/plans/archive/**` | query-only | when searching prior art |

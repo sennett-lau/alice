@@ -1,7 +1,7 @@
 ---
 name: diana
 preamble-tier: 4
-version: 1.3.1
+version: 1.3.2
 description: |
   Run the alice SOP end-to-end for a given feature description with little
   or no human interaction. Two modes (`fully-auto` default, `murmur` for
@@ -453,7 +453,7 @@ Check the size + migration-class gate (see "PR-slicer condition" above). If the 
 
 Diana acts as the "user" for `/pr-slicer`'s interactive prompts:
 - Step 5 confirmation (`A) Dispatch executors`) → always A
-- Step 6c.5 review findings (`A/B/C`) → always A (fix high-priority, defer rest)
+- Step 6e per-PR review gate findings (`A/B/C`) → always A (fix high-priority, defer rest)
 
 `/pr-slicer` fully replaces the single-PR flow. If slicer engages, skip to Step 6 (security audit runs against the cumulative diff of all slices combined).
 
