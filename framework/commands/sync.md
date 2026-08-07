@@ -114,6 +114,8 @@ Independent of the file-diff walk. Load every migration file from `$SYNC_DIR/lat
 - `version > CURRENT_VERSION`
 - `version <= LATEST_VERSION`
 
+Only exact `<semver>.md` files directly in `framework/migrations/` qualify — `README.md` and the `pre-release/` staging folder (unreleased maintainer notes) are never read.
+
 Sort by semver. These define structural changes that the file-diff walk can't represent (renames, splits, deletes, layout shifts). See `framework/migrations/README.md` for format.
 
 ### Deletions (sub-tier)
